@@ -70,7 +70,8 @@ const deleteHospital = async (req, res) => {
         if (error.message === 'Hospital not found') {
             res.status(404).json({ message: error.message });
         }
-        else if (error.message === 'Unauthorized to access this hospital') {
+        else if (error.message === 'Unauthorized to access this hospital' ||
+            error.message === 'Unauthorized to delete this hospital') {
             res.status(403).json({ message: error.message });
         }
         else {

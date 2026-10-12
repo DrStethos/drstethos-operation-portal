@@ -83,6 +83,11 @@ export const HospitalsOperationsPage = () => {
     }
   };
 
+  const canDeleteHospital = (hospital: HospitalItem) => {
+    if (isSuperAdmin) return true;
+    return Boolean(user?.id && hospital.createdById && hospital.createdById === user.id);
+  };
+
   const scopedHospitals = hospitals.filter((hospital) =>
     listScope === "all" || hospital.createdById === user?.id
   );
@@ -333,7 +338,9 @@ export const HospitalsOperationsPage = () => {
                   <th className="px-5 py-3.5">Source</th>
                   <th className="px-5 py-3.5">Vacancy</th>
                   {isSuperAdmin && <th className="px-5 py-3.5">Added By</th>}
-                  {isSuperAdmin && <th className="px-5 py-3.5 text-right">Actions</th>}
+                  {(isSuperAdmin || filteredHospitals.some((h) => canDeleteHospital(h))) && (
+                    <th className="px-5 py-3.5 text-right">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -367,25 +374,29 @@ export const HospitalsOperationsPage = () => {
                           <span className="block max-w-[190px] truncate" title={creatorLabel(h)}>{creatorLabel(h)}</span>
                         </td>
                       )}
-                      {isSuperAdmin && (
+                      {(isSuperAdmin || filteredHospitals.some((item) => canDeleteHospital(item))) && (
                         <td className="whitespace-nowrap px-5 py-3.5 text-right">
                           <div className="flex justify-end gap-1">
-                            <Link
-                              to={`/admin/hospitals/${hid}/edit`}
-                              className="rounded-md p-1.5 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                              title="Edit hospital"
-                              aria-label={`Edit ${h.name}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteHospital(hid, h.name)}
-                              className="rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                              title="Delete Hospital"
-                              aria-label={`Delete ${h.name}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {isSuperAdmin && (
+                              <Link
+                                to={`/admin/hospitals/${hid}/edit`}
+                                className="rounded-md p-1.5 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
+                                title="Edit hospital"
+                                aria-label={`Edit ${h.name}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            )}
+                            {canDeleteHospital(h) && (
+                              <button
+                                onClick={() => handleDeleteHospital(hid, h.name)}
+                                className="rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                                title="Delete Hospital"
+                                aria-label={`Delete ${h.name}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       )}
@@ -428,24 +439,28 @@ export const HospitalsOperationsPage = () => {
                         )}
                       </div>
                     </div>
-                    {isSuperAdmin && (
+                    {(isSuperAdmin || canDeleteHospital(hospital)) && (
                       <div className="flex shrink-0 items-center gap-1">
-                        <Link
-                          to={`/admin/hospitals/${hid}/edit`}
-                          className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                          title="Edit hospital"
-                          aria-label={`Edit ${hospital.name}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                        <button
-                          onClick={() => handleDeleteHospital(hid, hospital.name)}
-                          className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                          title="Delete Hospital"
-                          aria-label={`Delete ${hospital.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {isSuperAdmin && (
+                          <Link
+                            to={`/admin/hospitals/${hid}/edit`}
+                            className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
+                            title="Edit hospital"
+                            aria-label={`Edit ${hospital.name}`}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        )}
+                        {canDeleteHospital(hospital) && (
+                          <button
+                            onClick={() => handleDeleteHospital(hid, hospital.name)}
+                            className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                            title="Delete Hospital"
+                            aria-label={`Delete ${hospital.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

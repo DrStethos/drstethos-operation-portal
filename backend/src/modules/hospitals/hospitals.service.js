@@ -94,7 +94,25 @@ class HospitalsService {
         return updated;
     }
     async deleteHospital(id, user) {
-        await this.getHospitalById(id, user); // verifies access
+        const hospital = await this.getHospitalById(id, user);
+        const isSuperAdmin = ['SUPER_ADMIN', 'super_admin'].includes(user?.role);
+        if (!isSuperAdmin) {
+            const currentUserId = (user?.id || user?.userId || user?._id)?.toString();
+            const hospitalCreatorId = hospital.createdById?.toString();
+            let isOwner = Boolean(currentUserId && hospitalCreatorId && currentUserId === hospitalCreatorId);
+            if (!isOwner && currentUserId) {
+                const assignment = await HospitalAccessAssignment_1.HospitalAccessAssignment.findOne({
+                    hospitalId: hospital._id,
+                    userId: currentUserId,
+                }).lean();
+                if (assignment) {
+                    isOwner = true;
+                }
+            }
+            if (!isOwner) {
+                throw new Error('Unauthorized to delete this hospital');
+            }
+        }
         await HospitalAccessAssignment_1.HospitalAccessAssignment.deleteMany({ hospitalId: id });
         return Hospital_1.Hospital.findByIdAndDelete(id).lean();
     }

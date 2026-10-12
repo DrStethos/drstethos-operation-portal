@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   Eye,
   EyeOff,
@@ -45,6 +47,11 @@ export const PortalLogin = () => {
 
     try {
       await login(email.trim().toLowerCase(), password);
+      try {
+        await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+      } catch {
+        // Silently ignored if this admin does not have a Firebase Auth account
+      }
       toast.success("Welcome back! Signed in to Operations Portal.");
       navigate("/admin/hospitals");
     } catch (error: any) {

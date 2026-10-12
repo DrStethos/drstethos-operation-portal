@@ -41,6 +41,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { deleteUserAccount as deleteUserAccountFn } from "@/helpers/userAdminHelper";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ManagedUser {
   id: string;
@@ -66,6 +67,7 @@ interface EditFormState {
 
 const AdminUsers = () => {
   const navigate = useNavigate();
+  const { user: portalUser } = useAuth();
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -266,7 +268,10 @@ const AdminUsers = () => {
     if (!deleteUser) return;
 
     const currentUid = auth.currentUser?.uid;
-    if (currentUid && (deleteUser.uid === currentUid || deleteUser.id === currentUid)) {
+    const isSelfByUid = Boolean(currentUid && (deleteUser.uid === currentUid || deleteUser.id === currentUid));
+    const isSelfByEmail = Boolean(portalUser?.email && deleteUser.email && deleteUser.email.toLowerCase() === portalUser.email.toLowerCase());
+
+    if (isSelfByUid || isSelfByEmail) {
       toast.error("You cannot delete your own admin account");
       setDeleteUser(null);
       return;

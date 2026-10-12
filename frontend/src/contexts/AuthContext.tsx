@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../lib/api';
+import { signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 interface User {
   id: string;
@@ -55,6 +57,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Logout error', error);
     } finally {
+      try {
+        await signOut(auth);
+      } catch {
+        // Silently ignored
+      }
       localStorage.removeItem('auth_token');
       setUser(null);
     }

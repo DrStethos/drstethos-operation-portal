@@ -18,6 +18,6 @@ router.get('/', getAllHospitals);
 router.get('/:id', getHospitalById);
 router.post('/', createHospital);
 router.put('/:id', authorizeRoles('SUPER_ADMIN'), updateHospital);
-router.delete('/:id', authorizeRoles('SUPER_ADMIN'), deleteHospital);
+router.delete('/:id', authorizeRoles('SUPER_ADMIN', 'MANAGER'), deleteHospital);
 
 export default router;
