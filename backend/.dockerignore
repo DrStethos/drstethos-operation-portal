@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+node_modules
+dist
+build
+uploads
+coverage
+*.log
+*.tsbuildinfo
+**/*service-account*.json
+**/*-firebase-adminsdk-*.json
+secrets
+secrets/**

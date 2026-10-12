@@ -1,0 +1,1 @@
+{"version":3,"file":"hospital-options.service.d.ts","sourceRoot":"","sources":["hospital-options.service.ts"],"names":[],"mappings":"AAEA,MAAM,MAAM,mBAAmB,GAAG,eAAe,GAAG,cAAc,CAAC;AAEnE,qBAAa,sBAAsB;IAC3B,UAAU;;;;IAQV,SAAS,CAAC,KAAK,EAAE,MAAM,EAAE,QAAQ,EAAE,OAAO;;;;IAwB1C,YAAY,CAAC,KAAK,EAAE,MAAM,EAAE,QAAQ,EAAE,OAAO;;;;CAkBpD;AAED,eAAO,MAAM,sBAAsB,wBAA+B,CAAC"}
