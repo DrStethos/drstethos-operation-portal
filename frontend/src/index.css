@@ -1,0 +1,517 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* DrStethos design system — colors in HSL */
+
+@layer base {
+  :root {
+    /* Operations portal defaults */
+    --background: 0 0% 100%;
+    --foreground: 150 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 30% 12%;
+
+    --primary: 142 62% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 142 35% 94%;
+    --secondary-foreground: 150 30% 14%;
+
+    --muted: 140 18% 96%;
+    --muted-foreground: 150 10% 42%;
+
+    --accent: 142 48% 92%;
+    --accent-foreground: 150 30% 12%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 145 18% 87%;
+    --input: 145 18% 87%;
+    --ring: 142 62% 35%;
+
+    --radius: 0.85rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Landing only — green + mint (matches logo) */
+  .landing-theme {
+    --background: 140 25% 97%;
+    --foreground: 150 30% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 150 30% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 30% 10%;
+    --primary: 142 55% 32%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 140 20% 94%;
+    --secondary-foreground: 150 30% 10%;
+    --muted: 140 14% 93%;
+    --muted-foreground: 150 8% 38%;
+    --accent: 152 45% 36%;
+    --accent-foreground: 0 0% 100%;
+    --border: 140 12% 88%;
+    --input: 140 12% 88%;
+    --ring: 142 55% 32%;
+  }
+
+  .dark {
+    --background: 217 91% 8%;
+    --foreground: 0 0% 100%;
+    --card: 217 91% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 217 91% 12%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 217 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 50% 20%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 217 50% 20%;
+    --muted-foreground: 217 20% 65%;
+    --accent: 217 90% 54%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 50% 20%;
+    --input: 217 50% 20%;
+    --ring: 217 100% 50%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply overflow-x-hidden;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased overflow-x-hidden max-w-[100vw];
+    letter-spacing: -0.01em;
+  }
+
+  #root {
+    @apply w-full max-w-[100vw] overflow-x-hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply mx-auto w-full max-w-[1200px] px-5 sm:px-8 md:px-10 lg:px-12 xl:px-16;
+  }
+
+  .section-y {
+    @apply py-16 md:py-20 lg:py-24;
+  }
+
+  .landing-theme .font-display,
+  .landing-theme h1,
+  .landing-theme h2 {
+    font-family: Poppins, system-ui, sans-serif;
+  }
+
+  .landing-theme .page-container {
+    @apply max-w-[1160px] px-5 sm:px-8 lg:px-10;
+  }
+
+  /* Landing type scale — balanced, readable, premium */
+  .landing-theme .display-hero {
+    font-family: Poppins, system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    font-size: clamp(2rem, 4.2vw, 3.5rem);
+  }
+
+  .landing-theme .display-statement {
+    font-family: Poppins, system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    font-size: clamp(1.75rem, 3.6vw, 3rem);
+  }
+
+  .landing-theme .display-xl {
+    font-family: Poppins, system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.12;
+    font-size: clamp(1.65rem, 3.2vw, 2.5rem);
+  }
+
+  .landing-theme .display-lg {
+    font-family: Poppins, system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    font-size: clamp(1.4rem, 2.4vw, 2rem);
+  }
+
+  .landing-theme .body-lg {
+    font-weight: 400;
+    line-height: 1.65;
+    font-size: clamp(0.95rem, 1.1vw, 1.0625rem);
+  }
+
+  .landing-theme .label-sm {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+  }
+
+  .landing-theme [data-reveal],
+  .landing-theme [data-reveal-stagger] > * {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .landing-theme [data-reveal],
+    .landing-theme [data-reveal-stagger] > * {
+      opacity: 1;
+    }
+  }
+
+  .landing-theme .scene-grain::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@layer utilities {
+  .bg-blue-600,
+  .bg-blue-500,
+  .bg-blue-50,
+  .bg-blue-100,
+  .border-blue-600,
+  .border-blue-200,
+  .border-blue-100,
+  .text-blue-600,
+  .text-blue-700,
+  .text-blue-800,
+  .text-blue-400,
+  .text-blue-300,
+  .ring-blue-600,
+  .focus\:border-blue-600:focus,
+  .focus-visible\:ring-blue-600\/20:focus-visible,
+  .focus-visible\:ring-blue-600:focus-visible,
+  .hover\:bg-blue-700:hover {
+    --portal-primary: 142 70% 38%;
+    --portal-primary-strong: 142 68% 31%;
+    --portal-primary-soft: 142 38% 95%;
+    --portal-primary-text: 142 70% 28%;
+  }
+
+  .bg-blue-600,
+  .bg-blue-500 {
+    background-color: hsl(var(--portal-primary)) !important;
+  }
+
+  .bg-blue-50,
+  .bg-blue-100 {
+    background-color: hsl(var(--portal-primary-soft)) !important;
+  }
+
+  .border-blue-600,
+  .border-blue-200,
+  .border-blue-100 {
+    border-color: hsl(var(--portal-primary)) !important;
+  }
+
+  .text-blue-600,
+  .text-blue-700,
+  .text-blue-800,
+  .text-blue-400,
+  .text-blue-300 {
+    color: hsl(var(--portal-primary-text)) !important;
+  }
+
+  .hover\:bg-blue-700:hover {
+    background-color: hsl(var(--portal-primary-strong)) !important;
+  }
+
+  .focus\:border-blue-600:focus,
+  .focus-visible\:ring-blue-600\/20:focus-visible,
+  .focus-visible\:ring-blue-600:focus-visible,
+  .ring-blue-600 {
+    --tw-ring-color: hsl(var(--portal-primary)) !important;
+    border-color: hsl(var(--portal-primary)) !important;
+  }
+
+  .text-emerald-700,
+  .text-emerald-600,
+  .bg-emerald-600,
+  .hover\:bg-emerald-700:hover,
+  .border-emerald-600,
+  .focus\:border-emerald-600:focus,
+  .focus-visible\:ring-emerald-600\/20:focus-visible,
+  .focus-visible\:ring-emerald-600:focus-visible {
+    --portal-primary: 142 70% 38%;
+    --portal-primary-strong: 142 68% 31%;
+  }
+}
+
+/* Shared operations portal UI */
+.operations-shell {
+  --portal-green: #197847;
+  --portal-green-dark: #14643b;
+  --portal-green-soft: #edf7f0;
+  --portal-ink: #183329;
+  --portal-muted: #64756d;
+  color: var(--portal-ink);
+}
+
+.operations-shell > aside {
+  box-shadow: 1px 0 0 rgb(20 55 35 / 2%);
+}
+
+.operations-shell main {
+  background:
+    radial-gradient(ellipse at 10% 0%, rgb(228 242 232 / 45%), transparent 34rem),
+    #f6f9f7;
+}
+
+.operations-shell main h2 {
+  color: #183329;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  letter-spacing: -0.025em;
+}
+
+.operations-shell main h3 {
+  letter-spacing: -0.015em;
+}
+
+.operations-shell main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.operations-shell main select,
+.operations-shell main textarea {
+  min-height: 2.625rem;
+  border-radius: 0.625rem;
+  background-color: #fbfdfb;
+  font-size: 0.875rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.operations-shell main input:focus,
+.operations-shell main select:focus,
+.operations-shell main textarea:focus {
+  border-color: rgb(25 120 71 / 55%);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgb(25 120 71 / 10%);
+  outline: none;
+}
+
+.operations-shell main button,
+.operations-shell main a {
+  transition-duration: 160ms;
+}
+
+.operations-shell main button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.operations-shell main .bg-white.rounded-xl.border,
+.operations-shell main form.rounded-xl,
+.operations-shell main section.rounded-xl {
+  border-color: #e3ebe5;
+  box-shadow: 0 2px 8px rgb(20 55 35 / 3%), 0 14px 34px -28px rgb(20 55 35 / 16%);
+}
+
+.operations-shell main table {
+  border-collapse: separate;
+  border-spacing: 0;
+  color: #33473d;
+}
+
+.operations-shell main table thead {
+  background-color: #f5f8f6;
+}
+
+.operations-shell main table thead th {
+  color: #607168;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.075em;
+  white-space: nowrap;
+}
+
+.operations-shell main table tbody td {
+  min-height: 3.75rem;
+  font-size: 0.8125rem;
+}
+
+.operations-shell main table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.operations-shell main table tbody tr:hover {
+  background-color: #f6faf7;
+}
+
+.operations-shell main .text-blue-600,
+.operations-shell main .text-blue-700,
+.operations-shell main .text-blue-800 {
+  color: var(--portal-green) !important;
+}
+
+.operations-shell main .bg-blue-600,
+.operations-shell main .bg-blue-700 {
+  background-color: var(--portal-green) !important;
+}
+
+.operations-shell main .hover\:bg-blue-700:hover {
+  background-color: var(--portal-green-dark) !important;
+}
+
+.operations-shell main .bg-blue-50,
+.operations-shell main .bg-blue-100 {
+  background-color: var(--portal-green-soft) !important;
+}
+
+.operations-shell main .border-blue-100,
+.operations-shell main .border-blue-200 {
+  border-color: #cce5d3 !important;
+}
+
+.operations-shell main .hover\:bg-blue-50:hover {
+  background-color: var(--portal-green-soft) !important;
+}
+
+@media (max-width: 640px) {
+  .operations-shell main h2 {
+    font-size: 1.125rem;
+  }
+
+  .operations-shell main > div {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .operations-shell main .overflow-x-auto {
+    border-radius: 0.75rem;
+  }
+}
+
+@layer utilities {
+  .gradient-medical {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(152 50% 32%) 100%);
+  }
+
+  .gradient-subtle {
+    background: linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--secondary)) 100%);
+  }
+
+  .shadow-medical {
+    box-shadow: 0 10px 32px -12px hsl(var(--primary) / 0.22);
+  }
+
+  .animate-bounce-soft {
+    animation: bounceSoft 1.8s ease-in-out infinite;
+  }
+
+  @keyframes bounceSoft {
+    0%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.7;
+    }
+    50% {
+      transform: translateY(6px);
+      opacity: 1;
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-marquee {
+    animation: marquee 32s linear infinite;
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-12px);
+    }
+  }
+
+  @keyframes heroFloat {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-6px);
+    }
+  }
+
+  .perspective-1200 {
+    perspective: 1200px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    .animate-bounce-soft,
+    .animate-float,
+    .animate-marquee {
+      animation: none !important;
+    }
+  }
+}
