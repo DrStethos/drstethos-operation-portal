@@ -20,6 +20,7 @@ const allowedOrigins = (process.env.FRONTEND_URL || '')
   .map((origin) => origin.trim().replace(/\/+$/, ''))
   .filter(Boolean);
 
+const productionOrigins = ['https://operations.drstethos.com'];
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
 app.use(cors({
@@ -30,7 +31,10 @@ app.use(cors({
 
     callback(
       null,
-      !origin || allowedOrigins.includes(origin) || isLocalDevelopmentOrigin,
+      !origin ||
+        allowedOrigins.includes(origin) ||
+        productionOrigins.includes(origin) ||
+        isLocalDevelopmentOrigin,
     );
   },
   credentials: true,

@@ -21,12 +21,16 @@ const allowedOrigins = (process.env.FRONTEND_URL || '')
     .split(',')
     .map((origin) => origin.trim().replace(/\/+$/, ''))
     .filter(Boolean);
+const productionOrigins = ['https://operations.drstethos.com'];
 const isDevelopment = process.env.NODE_ENV !== 'production';
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
         const isLocalDevelopmentOrigin = isDevelopment &&
             /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin || '');
-        callback(null, !origin || allowedOrigins.includes(origin) || isLocalDevelopmentOrigin);
+        callback(null, !origin ||
+            allowedOrigins.includes(origin) ||
+            productionOrigins.includes(origin) ||
+            isLocalDevelopmentOrigin);
     },
     credentials: true,
 }));

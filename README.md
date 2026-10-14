@@ -60,7 +60,7 @@ Configure these in the app's **App Configs → Environmental Variables**:
 | --- | --- | --- |
 | `MONGO_URI` | Required | MongoDB connection string for the existing database. Ensure the database allows connections from the CapRover host. |
 | `JWT_SECRET` | Required | Long, randomly generated secret used to sign and verify login tokens. Do not use the development fallback. |
-| `FRONTEND_URL` | Required when frontend is on a separate origin | Public frontend origin, without a trailing slash (for example, `https://portal.example.com`). Used for invitation links and to allow credentialed cross-origin API requests. |
+| `FRONTEND_URL` | Required when frontend is on a separate origin | Public frontend origin, without a trailing slash (for example, `https://operations.drstethos.com`). Used for invitation links and to allow credentialed cross-origin API requests. |
 | `SMTP_HOST` | Required for invitation email | SMTP server hostname. |
 | `SMTP_PORT` | Required for invitation email | SMTP server port, commonly `587` or `465`. |
 | `SMTP_SECURE` | Required for invitation email | Set to `true` when the SMTP server requires TLS from connection start (typically port `465`); otherwise `false`. |
@@ -76,7 +76,7 @@ Configure these in the app's **App Configs → Environmental Variables**:
 
 Both the root Docker build and the standalone frontend Dockerfile set `VITE_API_URL` to the deployed backend URL above. To change it for another environment, pass `--build-arg VITE_API_URL=https://<backend-host>/api` to `docker build`; Vite embeds this value in the static frontend at build time, so setting `VITE_API_URL` only as a CapRover runtime variable does not change an already-built bundle. `frontend/.env.production.example` records the current production value. For local development, `frontend/.env.example` continues to point to `http://localhost:5000/api`.
 
-The backend's `FRONTEND_URL` is an origin allow-list value for CORS as well as the origin used to build invitation links. Set it to the exact deployed frontend origin if the frontend and backend use separate domains. The frontend currently initializes Firebase using client configuration in source; Firebase-hosted features therefore also require the deployed domain to be permitted by the Firebase project and its security rules. No Firebase credentials are added to the Docker image.
+The backend's `FRONTEND_URL` is an origin allow-list value for CORS as well as the origin used to build invitation links. For the production operations portal, set it to `https://operations.drstethos.com` (no trailing slash) and redeploy or restart the backend after changing it. That production origin is also explicitly allowed by the backend. The frontend currently initializes Firebase using client configuration in source; Firebase-hosted features therefore also require the deployed domain to be permitted by the Firebase project and its security rules. No Firebase credentials are added to the Docker image.
 
 SMTP variables are needed for the invitation-email workflow; the application has placeholder defaults, which are not suitable for production. `EMAIL_PROVIDER` appears in the example environment file but is not currently read by the application.
 
