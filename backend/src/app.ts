@@ -17,16 +17,21 @@ const app = express();
 
 const allowedOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
   .filter(Boolean);
 
-if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.push('http://localhost:8080', 'http://127.0.0.1:8080');
-}
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 app.use(cors({
   origin: (origin, callback) => {
-    callback(null, !origin || allowedOrigins.includes(origin));
+    const isLocalDevelopmentOrigin =
+      isDevelopment &&
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin || '');
+
+    callback(
+      null,
+      !origin || allowedOrigins.includes(origin) || isLocalDevelopmentOrigin,
+    );
   },
   credentials: true,
 }));
