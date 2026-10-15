@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, Outlet, useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, BadgeCheck, UsersRound, FileWarning, LogOut,
-  Menu, X, Building2, FileSpreadsheet, Users, Tags, UserRound, Globe2
+  Menu, X, Building2, FileSpreadsheet, Users, Tags,
+  UserRound, Globe2, ChevronRight, Stethoscope, Briefcase
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,18 +19,14 @@ export const AdminLayout = () => {
   const isManager = isManagerRole(user?.role);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/login");
-    }
+    if (!loading && !user) navigate("/login");
   }, [user, loading, navigate]);
 
   useEffect(() => {
     const restrictedPaths = ["/admin/home", "/admin/verify", "/admin/incomplete-documents", "/admin/users"];
     const isHospitalEditPath = /^\/admin\/hospitals\/[^/]+\/edit$/.test(location.pathname);
     if (
-      !loading &&
-      user &&
-      isManager &&
+      !loading && user && isManager &&
       (restrictedPaths.includes(location.pathname) ||
         location.pathname.startsWith("/admin/teams") ||
         location.pathname === "/admin/hospital-options" ||
@@ -41,9 +38,7 @@ export const AdminLayout = () => {
     }
   }, [user, loading, location.pathname, isManager, navigate]);
 
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [location.pathname]);
+  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   const handleLogout = async () => {
     try {
@@ -58,28 +53,26 @@ export const AdminLayout = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="h-7 w-7 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin" />
+      <div className="flex h-screen items-center justify-center bg-[#f5f8f6]">
+        <div className="h-6 w-6 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin" />
       </div>
     );
   }
 
-  // Streamlined Navigation Groups
   const operationsNav = [
-    { name: "Hospitals Directory", path: "/admin/hospitals", icon: Building2 },
-    { name: "Bulk Ingestion", path: "/admin/imports", icon: FileSpreadsheet },
-    ...(!isManager ? [{ name: "Hospital Field Options", path: "/admin/hospital-options", icon: Tags }] : []),
+    { name: "Hospitals", path: "/admin/hospitals", icon: Building2 },
+    { name: "Bulk Imports", path: "/admin/imports", icon: FileSpreadsheet },
+    ...(!isManager ? [{ name: "Field Options", path: "/admin/hospital-options", icon: Tags }] : []),
     ...(!isManager ? [{ name: "Team Management", path: "/admin/teams", icon: Users }] : []),
   ];
 
-  const platformNav = isManager
-    ? []
-    : [
-        { name: "Operations Overview", path: "/admin/home", icon: LayoutDashboard },
-        { name: "Doctor Verification", path: "/admin/verify", icon: BadgeCheck },
-        { name: "Incomplete Docs", path: "/admin/incomplete-documents", icon: FileWarning },
-        { name: "App Accounts", path: "/admin/users", icon: UsersRound },
-      ];
+  const platformNav = isManager ? [] : [
+    { name: "Overview", path: "/admin/home", icon: LayoutDashboard },
+    { name: "Hospital Jobs", path: "/admin/jobs", icon: Briefcase },
+    { name: "Verifications", path: "/admin/verify", icon: BadgeCheck },
+    { name: "Incomplete Docs", path: "/admin/incomplete-documents", icon: FileWarning },
+    { name: "App Accounts", path: "/admin/users", icon: UsersRound },
+  ];
 
   const isActive = (path: string) => {
     if (path === "/admin/hospitals") {
@@ -95,179 +88,144 @@ export const AdminLayout = () => {
 
   const getPageMeta = () => {
     const p = location.pathname;
-    if (p === "/admin/hospitals/new") {
-      return { title: "Register Hospital Facility", subtitle: "Add an operational medical center to the portal network" };
-    }
-    if (/^\/admin\/hospitals\/[^/]+\/edit$/.test(p)) {
-      return { title: "Edit Hospital", subtitle: "Update hospital contact and facility details" };
-    }
-    if (p === "/admin/imports") {
-      return { title: "Bulk Hospital Ingestion", subtitle: "Upload Excel spreadsheets to ingest hospital records" };
-    }
-    if (p === "/admin/hospital-options") {
-      return { title: "Hospital Field Options", subtitle: "Manage hospital types and speciality dropdown values" };
-    }
-    if (p === "/admin/teams/invite") {
-      return { title: "Invite Team Member", subtitle: "Dispatch onboarding credentials via transactional email" };
-    }
-    if (p.includes("/teams")) {
-      return { title: "Team Management", subtitle: "Administer staff permissions, roles, and active invitations" };
-    }
-    if (p.includes("/hospitals")) {
-      return { title: "Hospitals Directory", subtitle: "Manage operational facilities and scoped personnel assignments" };
-    }
-    if (p.includes("/incomplete-documents")) {
-      return { title: "Incomplete Documents", subtitle: "Follow up with doctors missing credential requirements" };
-    }
-    if (p.includes("/verify")) {
-      return { title: "Doctor Verification", subtitle: "Inspect medical licenses and take approval action" };
-    }
-    if (p.includes("/users")) {
-      return { title: "App Accounts Management", subtitle: "Search and administer mobile application accounts" };
-    }
-    return { title: "Operations Workspace", subtitle: "Overview metrics and operational activity feeds" };
+    if (p === "/admin/hospitals/new") return { title: "Register Hospital", subtitle: "Add a medical center to the network" };
+    if (/^\/admin\/hospitals\/[^/]+\/edit$/.test(p)) return { title: "Edit Hospital", subtitle: "Update facility details" };
+    if (p === "/admin/imports") return { title: "Bulk Imports", subtitle: "Upload Excel spreadsheets to ingest hospital records" };
+    if (p === "/admin/hospital-options") return { title: "Field Options", subtitle: "Manage hospital type and speciality dropdowns" };
+    if (p === "/admin/teams/invite") return { title: "Invite Member", subtitle: "Send onboarding credentials via email" };
+    if (p === "/admin/jobs") return { title: "Hospital Jobs", subtitle: "Browse job postings and vacancies from registered hospitals" };
+    if (p.includes("/teams")) return { title: "Team Management", subtitle: "Manage staff roles and active invitations" };
+    if (p.includes("/hospitals")) return { title: "Hospitals Directory", subtitle: "Manage facilities and personnel assignments" };
+    if (p.includes("/incomplete-documents")) return { title: "Incomplete Documents", subtitle: "Follow up with doctors missing credentials" };
+    if (p.includes("/verify")) return { title: "Verifications", subtitle: "Review doctor and hospital profiles and take action" };
+    if (p.includes("/users")) return { title: "App Accounts", subtitle: "Manage mobile application accounts" };
+    return { title: "Operations Workspace", subtitle: "Overview and activity feeds" };
   };
 
   const meta = getPageMeta();
+  const userInitial = (user?.firstName?.[0] || user?.email?.[0] || "U").toUpperCase();
+  const userLabel = user?.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : user?.email ?? "User";
+  const roleLabel = isSuperAdminRole(user?.role) ? "Super Admin" : "Operations Manager";
 
-  const sidebar = (
-    <div className="flex h-full flex-col bg-white">
-      {/* Brand Header */}
-      <div className="relative flex h-[76px] items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-emerald-50/80 via-white to-white px-5">
-        <Link to="/admin/hospitals" className="flex items-center gap-2 min-w-0">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-emerald-100 bg-white shadow-sm">
-            <img src="/logo.png" alt="DrStethos" className="h-7 w-7 rounded object-contain" />
+  /* ── Nav item — reused for both sections ── */
+  const NavItem = ({ item }: { item: { name: string; path: string; icon: React.ElementType } }) => {
+    const Icon = item.icon;
+    const active = isActive(item.path);
+    const isHospitalsItem = item.path === "/admin/hospitals";
+    const searchParams = new URLSearchParams(location.search);
+    const scope = searchParams.get("scope");
+
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => navigate(item.path)}
+          className={`group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all duration-150 ${
+            active
+              ? "bg-emerald-50 text-emerald-900 font-semibold"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          }`}
+        >
+          <span className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md transition-colors ${
+            active
+              ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/30"
+              : "bg-slate-100 text-slate-500 group-hover:bg-emerald-50 group-hover:text-emerald-700"
+          }`}>
+            <Icon className="h-3.5 w-3.5" />
           </span>
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-bold leading-tight tracking-tight text-slate-900">
-              DrStethos
-            </p>
-            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-700">
-              Operations Portal
-            </p>
-          </div>
-        </Link>
-      </div>
+          <span className="min-w-0 flex-1 truncate text-left">{item.name}</span>
+          {active && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-500" />}
+        </button>
 
-      {/* Navigation Sections */}
-      <nav className="flex-1 space-y-7 overflow-y-auto px-3 py-5">
-        {/* Section 1: Operations Management */}
-        <div className="space-y-1">
-          <p className="mb-2.5 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-            Operations &amp; Facilities
-          </p>
-          {operationsNav.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
-            return (
-              <div key={item.path}>
-                <button
-                  type="button"
-                  onClick={() => navigate(item.path)}
-                  className={`group flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] transition-all ${
-                    active
-                      ? "border-emerald-100 bg-emerald-50/80 font-semibold text-emerald-900 shadow-sm shadow-emerald-950/[0.03]"
-                      : "border-transparent font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  }`}
-                >
-                  <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
-                    active ? "bg-white text-emerald-700 shadow-sm" : "bg-slate-50 text-slate-500 group-hover:bg-white group-hover:text-emerald-700"
-                  }`}>
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-left leading-tight">{item.name}</span>
-                  {active && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-600" />}
-                </button>
-                {item.path === "/admin/hospitals" && (
-                  <div className="ml-[26px] mt-1.5 space-y-1 border-l border-emerald-100 py-1 pl-3">
-                    {[
-                      { label: "My List", scope: "mine", icon: UserRound },
-                      { label: "All List", scope: "all", icon: Globe2 },
-                    ].map(({ label, scope, icon: ScopeIcon }) => {
-                      const isCurrentHospitalDirectory =
-                        location.pathname === "/admin/hospitals" &&
-                        (scope === "mine"
-                          ? new URLSearchParams(location.search).get("scope") === "mine"
-                          : new URLSearchParams(location.search).get("scope") !== "mine");
-                      return (
-                        <button
-                          key={scope}
-                          type="button"
-                          onClick={() => navigate(`/admin/hospitals?scope=${scope}`)}
-                          aria-current={isCurrentHospitalDirectory ? "page" : undefined}
-                          className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-all ${
-                            isCurrentHospitalDirectory
-                              ? "bg-white font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-100"
-                              : "text-slate-500 hover:bg-white/80 hover:text-slate-800"
-                          }`}
-                        >
-                          <span className={`flex h-5 w-5 items-center justify-center rounded-md ${
-                            isCurrentHospitalDirectory ? "text-emerald-700" : "text-slate-400"
-                          }`}>
-                            <ScopeIcon className="h-3.5 w-3.5" />
-                          </span>
-                          {label}
-                          {isCurrentHospitalDirectory && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-emerald-600" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {!isManager && (
-          <div className="space-y-1">
-            <p className="mb-2.5 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-              Platform &amp; Accounts
-            </p>
-            {platformNav.map((item) => {
-              const Icon = item.icon;
-              const active = isActive(item.path);
+        {/* Hospital sub-scope links */}
+        {isHospitalsItem && active && (
+          <div className="ml-[26px] mt-0.5 space-y-0.5 border-l-2 border-emerald-100 pl-3">
+            {[
+              { label: "My Hospitals", scope: "mine", icon: UserRound },
+              { label: "All Hospitals", scope: "all", icon: Globe2 },
+            ].map(({ label, scope: s, icon: ScopeIcon }) => {
+              const isCurrentScope = s === "mine"
+                ? scope === "mine"
+                : scope !== "mine";
               return (
                 <button
-                  key={item.path}
+                  key={s}
                   type="button"
-                  onClick={() => navigate(item.path)}
-                  className={`group flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] transition-all ${
-                    active
-                      ? "border-emerald-100 bg-emerald-50/80 font-semibold text-emerald-900 shadow-sm shadow-emerald-950/[0.03]"
-                      : "border-transparent font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  onClick={() => navigate(`/admin/hospitals?scope=${s}`)}
+                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] transition-all ${
+                    isCurrentScope
+                      ? "bg-white font-semibold text-emerald-800 shadow-sm ring-1 ring-emerald-100"
+                      : "text-slate-500 hover:text-slate-800 hover:bg-white/60"
                   }`}
                 >
-                  <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
-                    active ? "bg-white text-emerald-700 shadow-sm" : "bg-slate-50 text-slate-500 group-hover:bg-white group-hover:text-emerald-700"
-                  }`}>
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-left leading-tight">{item.name}</span>
-                  {active && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-emerald-600" />}
+                  <ScopeIcon className={`h-3 w-3 flex-shrink-0 ${isCurrentScope ? "text-emerald-600" : "text-slate-400"}`} />
+                  {label}
+                  {isCurrentScope && <ChevronRight className="ml-auto h-3 w-3 text-emerald-400" />}
                 </button>
               );
             })}
           </div>
         )}
+      </div>
+    );
+  };
+
+  const Sidebar = () => (
+    <div className="flex h-full flex-col bg-white">
+      {/* Brand */}
+      <Link
+        to="/admin/hospitals"
+        className="flex h-[60px] flex-shrink-0 items-center gap-2.5 border-b border-slate-100 px-4 hover:bg-slate-50/60 transition-colors"
+      >
+        <img
+          src="/logo.png"
+          alt="DrStethos"
+          className="h-8 w-8 rounded-lg object-contain shadow-sm flex-shrink-0"
+        />
+        <div className="min-w-0">
+          <p className="text-[14px] font-bold leading-none text-slate-900 tracking-tight">DrStethos</p>
+          <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-emerald-600">Operations Portal</p>
+        </div>
+      </Link>
+
+      {/* Nav — scrollbar hidden */}
+      <nav className="scrollbar-hide flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        {/* Operations */}
+        <div className="space-y-0.5">
+          <p className="mb-2 px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+            Operations
+          </p>
+          {operationsNav.map((item) => <NavItem key={item.path} item={item} />)}
+        </div>
+
+        {/* Platform (super admin only) */}
+        {!isManager && platformNav.length > 0 && (
+          <div className="space-y-0.5">
+            <p className="mb-2 px-2.5 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+              Platform
+            </p>
+            {platformNav.map((item) => <NavItem key={item.path} item={item} />)}
+          </div>
+        )}
       </nav>
 
-      {/* User Footer */}
-      <div className="border-t border-slate-100 bg-slate-50/60 p-3">
-        <div className="mb-2 flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white p-2.5">
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-xs font-bold uppercase text-emerald-800">
-            {(user?.email?.[0] || "U").toUpperCase()}
+      {/* User footer */}
+      <div className="flex-shrink-0 border-t border-slate-100 p-3 space-y-1">
+        {/* Avatar row */}
+        <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white">
+            {userInitial}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-semibold text-slate-800">{user?.email || "User"}</p>
-            <p className="mt-0.5 truncate text-[10px] font-medium text-emerald-700">
-              {isSuperAdminRole(user?.role) ? "Super Admin" : "Operations Manager"}
-            </p>
+            <p className="truncate text-[12px] font-semibold text-slate-800 leading-none">{userLabel}</p>
+            <p className="mt-0.5 text-[10px] font-medium text-emerald-600">{roleLabel}</p>
           </div>
         </div>
+        {/* Logout */}
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
         >
           <LogOut className="h-3.5 w-3.5" />
           Sign Out
@@ -277,56 +235,73 @@ export const AdminLayout = () => {
   );
 
   return (
-    <div className="operations-shell flex h-screen overflow-hidden bg-slate-100">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-[248px] flex-shrink-0 border-r border-slate-200 bg-white">
-        {sidebar}
+    <div className="operations-shell flex h-screen overflow-hidden bg-[#f5f8f6]">
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-[220px] h-full flex-col flex-shrink-0 border-r border-slate-200/80 bg-white overflow-hidden shadow-[1px_0_0_0_rgb(226_232_240/0.6)]">
+        <Sidebar />
       </aside>
 
-      {/* Mobile Drawer */}
+      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
+      {/* Mobile drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-[248px] border-r border-slate-200 bg-white transition-transform duration-300 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-[220px] border-r border-slate-200 bg-white shadow-xl transition-transform duration-250 ease-out md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <button
           type="button"
-          className="absolute right-2 top-3 rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
+          className="absolute right-2 top-2.5 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
           onClick={() => setSidebarOpen(false)}
           aria-label="Close menu"
         >
           <X className="h-4 w-4" />
         </button>
-        {sidebar}
+        <Sidebar />
       </aside>
 
-      {/* Main Content View */}
+      {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
-          <div className="flex items-center gap-3">
+
+        {/* Top bar */}
+        <header className="flex h-[60px] flex-shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/80 backdrop-blur-sm px-4 sm:px-6">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile hamburger */}
             <button
               type="button"
-              className="rounded-md p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+              className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 transition-colors md:hidden"
               onClick={() => setSidebarOpen(true)}
               aria-label="Open menu"
             >
               <Menu className="h-4 w-4" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-slate-900 tracking-tight leading-tight">
+              <h1 className="text-[15px] font-bold text-slate-900 tracking-tight leading-tight truncate">
                 {meta.title}
               </h1>
-              <p className="text-xs text-slate-500 font-normal truncate">{meta.subtitle}</p>
+              <p className="text-[11px] text-slate-500 leading-tight truncate hidden sm:block">{meta.subtitle}</p>
             </div>
+          </div>
+
+          {/* Header right — role badge */}
+          <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {roleLabel}
+            </span>
           </div>
         </header>
 
+        {/* Page content */}
         <main className="flex-1 overflow-auto">
-          <div className="mx-auto w-full max-w-[1440px] px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+          <div className="mx-auto w-full max-w-[1400px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
             <Outlet />
           </div>
         </main>

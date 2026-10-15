@@ -43,7 +43,46 @@ export const updateHospital = async (req: Request, res: Response) => {
   } catch (error: any) {
     if (error.message === 'Hospital not found') {
       res.status(404).json({ message: error.message });
-    } else if (error.message === 'Unauthorized to access this hospital') {
+    } else if (
+      error.message === 'Unauthorized to access this hospital' ||
+      error.message === 'You can only edit hospitals you added'
+    ) {
+      res.status(403).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: error.message || 'Internal Server Error' });
+    }
+  }
+};
+
+export const updateHospitalOutreach = async (req: Request, res: Response) => {
+  try {
+    const hospitalId = String(req.params.id);
+    const hospital = await hospitalsService.updateOutreach(hospitalId, req.body, (req as any).user);
+    res.json(hospital);
+  } catch (error: any) {
+    if (error.message === 'Invalid hospital ID' || error.message === 'Invalid hospital outreach details') {
+      res.status(400).json({ message: error.message });
+    } else if (error.message === 'Hospital not found') {
+      res.status(404).json({ message: error.message });
+    } else if (error.message === 'You can only edit hospitals you added') {
+      res.status(403).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: error.message || 'Internal Server Error' });
+    }
+  }
+};
+
+export const removeHospitalVacancy = async (req: Request, res: Response) => {
+  try {
+    const hospitalId = String(req.params.id);
+    const hospital = await hospitalsService.removeHospitalVacancy(hospitalId, (req as any).user);
+    res.json(hospital);
+  } catch (error: any) {
+    if (error.message === 'Invalid hospital ID') {
+      res.status(400).json({ message: error.message });
+    } else if (error.message === 'Hospital not found') {
+      res.status(404).json({ message: error.message });
+    } else if (error.message === 'You can only edit hospitals you added') {
       res.status(403).json({ message: error.message });
     } else {
       res.status(500).json({ message: error.message || 'Internal Server Error' });
@@ -64,6 +103,28 @@ export const deleteHospital = async (req: Request, res: Response) => {
       error.message === 'Unauthorized to delete this hospital'
     ) {
       res.status(403).json({ message: error.message });
+    } else {
+      res.status(500).json({ message: error.message || 'Internal Server Error' });
+    }
+  }
+};
+
+export const deleteHospitals = async (req: Request, res: Response) => {
+  try {
+    const result = await hospitalsService.deleteHospitals(req.body?.ids, (req as any).user);
+    res.json(result);
+  } catch (error: any) {
+    if (
+      error.message === 'Unauthorized to delete this hospital' ||
+      error.message === 'Bulk deletion is only allowed for hospitals in your My List'
+    ) {
+      res.status(403).json({ message: error.message });
+    } else if (
+      error.message === 'Select at least one hospital to delete' ||
+      error.message === 'One or more hospital IDs are invalid' ||
+      error.message === 'One or more hospitals were not found'
+    ) {
+      res.status(400).json({ message: error.message });
     } else {
       res.status(500).json({ message: error.message || 'Internal Server Error' });
     }

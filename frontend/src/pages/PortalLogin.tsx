@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import {
   Eye,
   EyeOff,
@@ -15,10 +16,11 @@ import {
   Mail,
   Building2,
   ShieldCheck,
-  Stethoscope,
   CheckCircle2,
   FileSpreadsheet,
-  Users2
+  Users2,
+  LogIn,
+  Stethoscope,
 } from "lucide-react";
 
 export const PortalLogin = () => {
@@ -29,12 +31,11 @@ export const PortalLogin = () => {
   const navigate = useNavigate();
   const { user, login } = useAuth();
 
-  // Auto-redirect if already authenticated
   useEffect(() => {
-    if (user) {
+    if (user && !isLoading) {
       navigate("/admin/hospitals", { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, isLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,27 +43,39 @@ export const PortalLogin = () => {
       toast.error("Please enter both email and password.");
       return;
     }
-
     setIsLoading(true);
-
     try {
-      await login(email.trim().toLowerCase(), password);
-      try {
-        await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-      } catch {
-        // Silently ignored if this admin does not have a Firebase Auth account
+      const portalUser = await login(email.trim().toLowerCase(), password);
+      if (portalUser.role === "SUPER_ADMIN" || portalUser.role === "super_admin") {
+        try {
+          const credential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+          const userDocument = await getDoc(doc(db, "users", credential.user.uid));
+          const userData = userDocument.data();
+          if (!userDocument.exists() || (userData?.isAdmin !== true && userData?.role !== "admin")) {
+            throw new Error("This Firebase account is not authorized for admin verification.");
+          }
+        } catch (error) {
+          console.warn("MongoDB portal login succeeded, but Firebase verification sign-in failed:", error);
+          try {
+            await signOut(auth);
+          } catch (signOutError) {
+            console.error("Could not clear the unverified Firebase session:", signOutError);
+          }
+          toast.warning("Portal login succeeded. Verification actions may be unavailable without an authorized Firebase admin account.");
+        }
       }
       toast.success("Welcome back! Signed in to Operations Portal.");
       navigate("/admin/hospitals");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       let errorMsg = "Invalid email or password. Please verify your credentials.";
-      if (!error.response) {
+      const axiosErr = error as { response?: { data?: { message?: string; error?: string } } };
+      if (!axiosErr.response) {
         errorMsg = "Cannot reach backend server. Please verify the backend is running on port 5000.";
-      } else if (error.response.data?.message) {
-        errorMsg = error.response.data.message;
-      } else if (error.response.data?.error) {
-        errorMsg = error.response.data.error;
+      } else if (axiosErr.response.data?.message) {
+        errorMsg = axiosErr.response.data.message;
+      } else if (axiosErr.response.data?.error) {
+        errorMsg = axiosErr.response.data.error;
       }
       toast.error(errorMsg);
     } finally {
@@ -70,194 +83,226 @@ export const PortalLogin = () => {
     }
   };
 
+  const features = [
+    {
+      icon: <Building2 className="w-4 h-4" />,
+      title: "Facility Management",
+      desc: "Manage hospital profiles, departmental assignments, and operational contacts in one place.",
+    },
+    {
+      icon: <FileSpreadsheet className="w-4 h-4" />,
+      title: "Bulk Data Imports",
+      desc: "High-throughput Excel spreadsheet ingestion with automated validation and error reports.",
+    },
+    {
+      icon: <Users2 className="w-4 h-4" />,
+      title: "Role-Based Access Control",
+      desc: "Secure invitation-driven onboarding with isolated access boundaries for managers and super admins.",
+    },
+  ];
+
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-slate-50">
-      {/* ================= LEFT SIDE: Brand & Operations Highlights ================= */}
-      <div className="relative lg:w-[48%] xl:w-[45%] bg-slate-900 text-white flex flex-col justify-between p-8 sm:p-12 lg:p-16 overflow-hidden">
-        {/* Subtle background glow & grid lines */}
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 via-slate-900 to-slate-950 pointer-events-none" />
+    <div className="h-screen w-full overflow-hidden flex flex-col lg:flex-row bg-[#eef7f0]">
+
+      {/* ── LEFT PANEL — branding (hidden on mobile) ── */}
+      <div className="hidden lg:flex relative w-[52%] flex-col justify-between px-12 py-8 overflow-hidden">
+
+        {/* Dot-grid texture */}
         <div
-          className="absolute inset-0 opacity-[0.05] pointer-events-none"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-            backgroundSize: "28px 28px",
-          }}
+          className="absolute inset-0 opacity-[0.035] pointer-events-none"
+          style={{ backgroundImage: `radial-gradient(circle at 1px 1px, #197847 1px, transparent 0)`, backgroundSize: "26px 26px" }}
+          aria-hidden="true"
         />
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-green-500/10 rounded-full blur-3xl pointer-events-none" />
+        {/* Subtle corner glows */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-emerald-200/25 blur-3xl pointer-events-none" aria-hidden="true" />
+        <div className="absolute -bottom-16 -left-10 w-56 h-56 rounded-full bg-emerald-100/35 blur-3xl pointer-events-none" aria-hidden="true" />
 
-        {/* Top Header: Brand */}
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
-              <Stethoscope className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold tracking-tight text-white leading-none">
-                DrStethos
-              </h2>
-              <span className="text-[11px] font-medium text-emerald-400 uppercase tracking-wider">
-                Hospital Operations
-              </span>
-            </div>
+        {/* Logo */}
+        <div className="relative z-10 flex items-center gap-2.5">
+          <img src="/logo.png" alt="DrStethos" className="h-9 w-9 rounded-lg object-contain shadow-sm flex-shrink-0" />
+          <div>
+            <p className="text-[#1a3c2a] font-bold text-sm leading-none">DrStethos</p>
+            <p className="text-[9.5px] font-semibold text-emerald-600 uppercase tracking-[0.2em] mt-0.5">Hospital Operations</p>
           </div>
         </div>
 
-        {/* Middle: Feature Highlights for Operations */}
-        <div className="relative z-10 my-10 lg:my-auto space-y-8 max-w-lg">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/20 text-xs font-medium text-emerald-300">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Centralized Enterprise Platform
-            </div>
-            <h1 className="text-2xl sm:text-3xl xl:text-4xl font-extrabold tracking-tight text-white leading-tight">
-              Hospital Operations &amp; Facility Governance
+        {/* Main copy */}
+        <div className="relative z-10 space-y-5">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-emerald-200 text-[11px] font-semibold text-emerald-700 shadow-sm">
+            <ShieldCheck className="w-3 h-3" />
+            Centralized Enterprise Platform
+          </div>
+
+          {/* Heading */}
+          <div>
+            <h1 className="text-[2.15rem] font-extrabold text-[#1a2e22] leading-[1.15]">
+              Hospital Operations &amp;
             </h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              A unified portal for administrators and hospital managers to orchestrate operations, streamline credential verification, and manage facility access.
-            </p>
+            <h1 className="text-[2.15rem] font-extrabold text-emerald-600 leading-[1.15]">
+              Facility Governance
+            </h1>
           </div>
 
-          {/* Key Capabilities */}
-          <div className="space-y-4 pt-2">
-            <div className="flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 flex-shrink-0 mt-0.5">
-                <Building2 className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-white">Facility Management</h4>
-                <p className="text-xs text-slate-400 leading-relaxed mt-0.5">
-                  Manage hospital profiles, departmental assignments, and operational contacts in one place.
-                </p>
-              </div>
-            </div>
+          {/* Description */}
+          <p className="text-[13px] text-slate-500 leading-relaxed max-w-[400px]">
+            A unified portal for administrators and hospital managers to orchestrate operations,
+            streamline credential verification, and manage facility access.
+          </p>
 
-            <div className="flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 flex-shrink-0 mt-0.5">
-                <FileSpreadsheet className="w-4 h-4" />
+          {/* Feature rows */}
+          <div className="space-y-3.5 pt-1">
+            {features.map((f) => (
+              <div key={f.title} className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0 mt-0.5">
+                  {f.icon}
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold text-slate-800">{f.title}</p>
+                  <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">{f.desc}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-semibold text-white">Bulk Data Imports</h4>
-                <p className="text-xs text-slate-400 leading-relaxed mt-0.5">
-                  High-throughput Excel spreadsheet ingestion with automated validation and error reports.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 flex-shrink-0 mt-0.5">
-                <Users2 className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-semibold text-white">Role-Based Access Control</h4>
-                <p className="text-xs text-slate-400 leading-relaxed mt-0.5">
-                  Secure invitation-driven onboarding with isolated access boundaries for managers and super admins.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Bottom Footer */}
-        <div className="relative z-10 pt-6 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-1.5 text-slate-300 font-medium">
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+        {/* Footer */}
+        <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="flex items-center gap-1.5 text-slate-500 font-medium">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
             MongoDB Powered
           </div>
-          <span>&copy; {new Date().getFullYear()} DrStethos</span>
+          <span>© {new Date().getFullYear()} DrStethos</span>
         </div>
       </div>
 
-      {/* ================= RIGHT SIDE: Clean Sign-In Form ================= */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 lg:p-16 xl:p-24 bg-white">
-        <div className="w-full max-w-md space-y-8">
-          {/* Form Header */}
-          <div className="space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-              Sign In to Portal
-            </h2>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Enter your authorized credentials to access your administrative operations workspace.
-            </p>
+      {/* ── RIGHT PANEL — login card ── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-5 sm:px-8 py-6 overflow-y-auto">
+
+        {/* Mobile-only logo */}
+        <div className="flex lg:hidden items-center gap-2 mb-5">
+          <img src="/logo.png" alt="DrStethos" className="h-8 w-8 rounded-lg object-contain shadow-sm flex-shrink-0" />
+          <div>
+            <p className="text-[#1a3c2a] font-bold text-sm leading-none">DrStethos</p>
+            <p className="text-[9px] font-semibold text-emerald-600 uppercase tracking-widest mt-0.5">Hospital Operations</p>
+          </div>
+        </div>
+
+        {/* Card wrapper — constrained, vertically stacked */}
+        <div className="w-full max-w-[400px] space-y-3">
+
+          {/* Secure Access — above card */}
+          <div className="flex justify-end items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <div className="text-right">
+              <span className="text-[11px] font-semibold text-emerald-700">Secure Access</span>
+              <span className="text-[10px] text-slate-400 block leading-none mt-0.5">Only authorized personnel.</span>
+            </div>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold text-slate-700">
-                Email Address
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="admin@drstethos.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                  autoComplete="email"
-                  className="h-11 pl-10 text-sm bg-slate-50/70 border-slate-200 focus:bg-white focus:border-emerald-600 focus-visible:ring-emerald-600/20"
-                />
+          {/* White login card */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-md p-6 space-y-5">
+
+            {/* Card header */}
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="DrStethos" className="h-10 w-10 rounded-xl object-contain shadow-sm flex-shrink-0" />
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 leading-tight">Sign In to Portal</h2>
+                <p className="text-[11px] text-slate-500 leading-snug mt-0.5">
+                  Enter your credentials to access your operations workspace.
+                </p>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-xs font-semibold text-slate-700">
+            {/* Form */}
+            <form onSubmit={handleLogin} className="space-y-3.5">
+
+              {/* Email */}
+              <div className="space-y-1">
+                <Label htmlFor="email" className="text-[11px] font-semibold text-slate-700">
+                  Email Address
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@hospital.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoFocus
+                    autoComplete="email"
+                    className="h-10 pl-9 text-sm bg-slate-50 border-slate-200 focus:bg-white focus:border-emerald-600 focus-visible:ring-emerald-600/20 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <Label htmlFor="password" className="text-[11px] font-semibold text-slate-700">
                   Password
                 </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="h-10 pl-9 pr-9 text-sm bg-slate-50 border-slate-200 focus:bg-white focus:border-emerald-600 focus-visible:ring-emerald-600/20 rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                  className="h-11 pl-10 pr-10 text-sm bg-slate-50/70 border-slate-200 focus:bg-white focus:border-emerald-600 focus-visible:ring-emerald-600/20"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full h-11 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all mt-3"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Authenticating...
-                </>
-              ) : (
-                "Sign In to Operations Portal"
-              )}
-            </Button>
-          </form>
+              {/* Submit */}
+              <Button
+                type="submit"
+                className="w-full h-10 text-sm font-semibold rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white shadow-sm transition-all gap-2"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Authenticating…</>
+                ) : (
+                  <><LogIn className="h-4 w-4" /> Sign In</>
+                )}
+              </Button>
 
-          {/* Invitation Notice Card */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 flex items-start gap-3">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <span className="font-semibold text-slate-800">Role-Based Access Notice</span>
-              <p className="text-slate-500 leading-relaxed">
-                Super Admins and Operations Managers sign in here. If you are newly assigned, check your inbox for an invitation link to set your password.
+              <p className="text-center text-[10px] text-slate-400">
+                Need help? Contact your system administrator.
               </p>
+            </form>
+
+            {/* Role notice */}
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-start gap-2.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-semibold text-slate-800">Role-Based Access Notice</p>
+                <p className="text-[10.5px] text-slate-500 leading-relaxed mt-0.5">
+                  <span className="font-medium text-emerald-700">Super Admins</span> and{" "}
+                  <span className="font-medium text-emerald-700">Operations Managers</span> sign in here.
+                  If newly assigned, check your inbox for an invitation link to set your password.
+                </p>
+              </div>
             </div>
           </div>
+
+          {/* Mobile footer */}
+          <p className="flex lg:hidden items-center justify-center gap-1.5 text-[10px] text-slate-400">
+            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+            MongoDB Powered · © {new Date().getFullYear()} DrStethos
+          </p>
         </div>
       </div>
     </div>

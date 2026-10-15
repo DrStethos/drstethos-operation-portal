@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 
 export interface IHospital {
   id?: string;
+  serialNumber?: string;
   name: string;
   hospitalType?: string;
   speciality?: string;
@@ -10,6 +11,10 @@ export interface IHospital {
   email?: string;
   source?: string;
   vacancy?: number;
+  contactStatus?: 'Connected' | 'Not Connected' | null;
+  outreachVacancies?: number | null;
+  outreachNotes?: string | null;
+  hospitalCommitments?: string | null;
   createdById?: string;
   createdByName?: string;
   createdByEmail?: string;
@@ -19,6 +24,7 @@ export interface IHospital {
 }
 
 const HospitalSchema = new Schema<IHospital>({
+  serialNumber: { type: String, trim: true },
   name: { type: String, required: true, trim: true },
   hospitalType: { type: String, trim: true },
   speciality: { type: String, trim: true },
@@ -27,6 +33,10 @@ const HospitalSchema = new Schema<IHospital>({
   email: { type: String, trim: true, lowercase: true },
   source: { type: String, trim: true },
   vacancy: { type: Number, min: 0 },
+  contactStatus: { type: String, enum: ['Connected', 'Not Connected'] },
+  outreachVacancies: { type: Number, min: 0, validate: Number.isInteger },
+  outreachNotes: { type: String, trim: true, maxlength: 5000 },
+  hospitalCommitments: { type: String, trim: true, maxlength: 5000 },
   createdById: { type: String, trim: true },
   createdByName: { type: String, trim: true },
   createdByEmail: { type: String, trim: true, lowercase: true },

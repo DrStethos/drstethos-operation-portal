@@ -15,6 +15,7 @@ const invitations_routes_1 = __importDefault(require("./modules/invitations/invi
 const imports_routes_1 = __importDefault(require("./modules/imports/imports.routes"));
 const users_routes_1 = __importDefault(require("./modules/users/users.routes"));
 const hospital_options_routes_1 = __importDefault(require("./modules/hospital-options/hospital-options.routes"));
+const verification_routes_1 = __importDefault(require("./modules/verification/verification.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const allowedOrigins = (process.env.FRONTEND_URL || '')
@@ -43,6 +44,7 @@ app.use('/api/auth', auth_routes_1.default);
 app.use('/api/invitations', invitations_routes_1.default);
 app.use('/api/imports', imports_routes_1.default);
 app.use('/api/users', users_routes_1.default);
+app.use('/api/verification', verification_routes_1.default);
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', message: 'Hospital Operations Portal API' });
 });

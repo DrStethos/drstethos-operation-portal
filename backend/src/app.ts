@@ -10,6 +10,7 @@ import invitationRoutes from './modules/invitations/invitations.routes';
 import importRoutes from './modules/imports/imports.routes';
 import userRoutes from './modules/users/users.routes';
 import hospitalOptionsRoutes from './modules/hospital-options/hospital-options.routes';
+import verificationRoutes from './modules/verification/verification.routes';
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/invitations', invitationRoutes);
 app.use('/api/imports', importRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/verification', verificationRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Hospital Operations Portal API' });

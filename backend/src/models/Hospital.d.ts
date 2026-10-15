@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 export interface IHospital {
     id?: string;
+    serialNumber?: string;
     name: string;
     hospitalType?: string;
     speciality?: string;
@@ -9,6 +10,10 @@ export interface IHospital {
     email?: string;
     source?: string;
     vacancy?: number;
+    contactStatus?: 'Connected' | 'Not Connected' | null;
+    outreachVacancies?: number | null;
+    outreachNotes?: string | null;
+    hospitalCommitments?: string | null;
     createdById?: string;
     createdByName?: string;
     createdByEmail?: string;

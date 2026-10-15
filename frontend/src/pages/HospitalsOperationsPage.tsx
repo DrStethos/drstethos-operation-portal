@@ -2,18 +2,47 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Building2, Plus, Upload, Search, Phone, MapPin, Mail, BriefcaseBusiness,
-  Trash2, RefreshCw, Loader2, Hospital, Pencil, Filter
+  Trash2, RefreshCw, Loader2, Hospital, Pencil, Filter, MessageSquare, PhoneCall,
+  MoreHorizontal
 } from "lucide-react";
 
 interface HospitalItem {
   id: string;
   _id?: string;
+  serialNumber?: string;
   name: string;
   hospitalType?: string;
   speciality?: string;
@@ -22,6 +51,10 @@ interface HospitalItem {
   email?: string;
   source?: string;
   vacancy?: number | null;
+  contactStatus?: "Connected" | "Not Connected" | null;
+  outreachVacancies?: number | null;
+  outreachNotes?: string | null;
+  hospitalCommitments?: string | null;
   createdById?: string;
   createdByName?: string;
   createdByEmail?: string;
@@ -30,8 +63,18 @@ interface HospitalItem {
 }
 
 const isSuperAdminRole = (role?: string) => ["SUPER_ADMIN", "super_admin"].includes(role ?? "");
+const isCreatedByUser = (hospital: HospitalItem, user?: { id?: string; email?: string } | null) =>
+  Boolean(
+    (user?.id && hospital.createdById === user.id) ||
+    (user?.email && hospital.createdByEmail?.toLowerCase() === user.email.toLowerCase())
+  );
 const creatorLabel = (hospital: HospitalItem) =>
-  hospital.createdByName || hospital.createdByEmail || (hospital.createdById ? "Unknown user" : "Not recorded");
+  hospital.createdByEmail || "support@drstethos.com";
+const hospitalVacancy = (hospital: HospitalItem) => hospital.vacancy ?? hospital.outreachVacancies ?? null;
+const outreachComment = (hospital: HospitalItem) =>
+  [hospital.outreachNotes, hospital.hospitalCommitments]
+    .filter((comment): comment is string => Boolean(comment?.trim()))
+    .join("\n\n");
 const uniqueValues = (values: Array<string | undefined>) =>
   Array.from(new Set(values.filter((value): value is string => Boolean(value?.trim())))).sort((a, b) =>
     a.localeCompare(b)
@@ -44,6 +87,10 @@ export const HospitalsOperationsPage = () => {
   const location = useLocation();
   const isSuperAdmin = isSuperAdminRole(user?.role);
   const [hospitals, setHospitals] = useState<HospitalItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isDeleteSelectionMode, setIsDeleteSelectionMode] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
@@ -52,6 +99,12 @@ export const HospitalsOperationsPage = () => {
   const [specialityFilter, setSpecialityFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
   const [creatorFilter, setCreatorFilter] = useState("");
+  const [contactStatusFilter, setContactStatusFilter] = useState("");
+  const [outreachHospital, setOutreachHospital] = useState<HospitalItem | null>(null);
+  const [contactStatus, setContactStatus] = useState<"Connected" | "Not Connected">("Not Connected");
+  const [vacancy, setVacancy] = useState("");
+  const [outreachNotes, setOutreachNotes] = useState("");
+  const [isSavingOutreach, setIsSavingOutreach] = useState(false);
 
   const fetchHospitals = async () => {
     try {
@@ -70,6 +123,11 @@ export const HospitalsOperationsPage = () => {
     fetchHospitals();
   }, []);
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setIsDeleteSelectionMode(false);
+  }, [listScope]);
+
   const handleDeleteHospital = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to remove hospital facility "${name}"?`)) return;
 
@@ -83,13 +141,23 @@ export const HospitalsOperationsPage = () => {
     }
   };
 
-  const canDeleteHospital = (hospital: HospitalItem) => {
-    if (isSuperAdmin) return true;
-    return Boolean(user?.id && hospital.createdById && hospital.createdById === user.id);
+  const toggleHospitalSelection = (id: string, checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   };
 
+  const canDeleteHospital = (hospital: HospitalItem) => {
+    return isSuperAdmin || isCreatedByUser(hospital, user);
+  };
+  const canBulkDeleteHospitals = isSuperAdmin || listScope === "mine";
+  const canSelectHospitals = canBulkDeleteHospitals && isDeleteSelectionMode;
+
   const scopedHospitals = hospitals.filter((hospital) =>
-    listScope === "all" || hospital.createdById === user?.id
+    listScope === "all" || isCreatedByUser(hospital, user)
   );
   const hospitalTypes = uniqueValues(hospitals.map((hospital) => hospital.hospitalType));
   const specialities = uniqueValues(hospitals.map((hospital) => hospital.speciality));
@@ -114,16 +182,103 @@ export const HospitalsOperationsPage = () => {
         h.contactNumber?.toLowerCase().includes(q) ||
         h.email?.toLowerCase().includes(q) ||
         h.source?.toLowerCase().includes(q) ||
+        h.serialNumber?.toLowerCase().includes(q) ||
+        h.contactStatus?.toLowerCase().includes(q) ||
+        h.outreachNotes?.toLowerCase().includes(q) ||
+        outreachComment(h).toLowerCase().includes(q) ||
         creatorLabel(h).toLowerCase().includes(q) ||
-        String(h.vacancy ?? "").includes(q)) &&
+        String(hospitalVacancy(h) ?? "").includes(q)) &&
       (!typeFilter || h.hospitalType === typeFilter) &&
       (!specialityFilter || h.speciality === specialityFilter) &&
       (!sourceFilter || h.source === sourceFilter) &&
+      (!contactStatusFilter || (h.contactStatus ?? "Not Connected") === contactStatusFilter) &&
       (!isSuperAdmin || !creatorFilter || (h.createdById || `unrecorded:${creatorLabel(h)}`) === creatorFilter)
     );
   });
-  const vacancyTotal = scopedHospitals.reduce((total, hospital) => total + (hospital.vacancy ?? 0), 0);
+  const deletableFilteredHospitals = filteredHospitals.filter(canDeleteHospital);
+  const selectedDeletableIds = canBulkDeleteHospitals && isDeleteSelectionMode
+    ? Array.from(selectedIds).filter((id) =>
+        filteredHospitals.some((hospital) => (hospital.id || hospital._id) === id && canDeleteHospital(hospital))
+      )
+    : [];
+  const allFilteredSelected = deletableFilteredHospitals.length > 0 &&
+    deletableFilteredHospitals.every((hospital) => selectedIds.has(hospital.id || hospital._id || ""));
+
+  const toggleFilteredSelection = (checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      deletableFilteredHospitals.forEach((hospital) => {
+        const id = hospital.id || hospital._id;
+        if (!id) return;
+        if (checked) next.add(id);
+        else next.delete(id);
+      });
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedDeletableIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const response = await api.delete("/hospitals/bulk", { data: { ids: selectedDeletableIds } });
+      const deletedIds = new Set(selectedDeletableIds);
+      setHospitals((current) => current.filter((hospital) => !deletedIds.has(hospital.id || hospital._id || "")));
+      setSelectedIds(new Set());
+      setIsDeleteSelectionMode(false);
+      setBulkDeleteOpen(false);
+      toast.success(`${response.data.deletedCount} hospital${response.data.deletedCount === 1 ? "" : "s"} deleted.`);
+    } catch (error: unknown) {
+      console.error("Failed to delete selected hospitals:", error);
+      toast.error(apiErrorMessage(error, "Failed to delete selected hospitals."));
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const openOutreachDialog = (hospital: HospitalItem) => {
+    setOutreachHospital(hospital);
+    setContactStatus(hospital.contactStatus ?? "Not Connected");
+    const currentVacancy = hospitalVacancy(hospital);
+    setVacancy(currentVacancy == null ? "" : String(currentVacancy));
+    setOutreachNotes(outreachComment(hospital));
+  };
+
+  const saveOutreach = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!outreachHospital) return;
+    const vacancyCount = vacancy.trim() === "" ? null : Number(vacancy);
+    if (vacancyCount !== null && (!Number.isInteger(vacancyCount) || vacancyCount < 0)) {
+      toast.error("Vacancy must be a non-negative whole number.");
+      return;
+    }
+
+    setIsSavingOutreach(true);
+    try {
+      const response = await api.patch(`/hospitals/${outreachHospital.id || outreachHospital._id}/outreach`, {
+        contactStatus,
+        vacancy: contactStatus === "Connected" ? vacancyCount : null,
+        outreachNotes: outreachNotes.trim() || null,
+      });
+      setHospitals((current) => current.map((hospital) =>
+        (hospital.id || hospital._id) === (outreachHospital.id || outreachHospital._id)
+          ? { ...hospital, ...response.data }
+          : hospital
+      ));
+      setOutreachHospital(null);
+      toast.success("Hospital outreach details saved.");
+    } catch (error: unknown) {
+      console.error("Failed to save hospital outreach details:", error);
+      toast.error(apiErrorMessage(error, "Failed to save hospital outreach details."));
+    } finally {
+      setIsSavingOutreach(false);
+    }
+  };
+
+  const vacancyTotal = scopedHospitals.reduce((total, hospital) => total + (hospitalVacancy(hospital) ?? 0), 0);
   const categorizedCount = scopedHospitals.filter((hospital) => hospital.hospitalType && hospital.speciality).length;
+  const contactedCount = scopedHospitals.filter((hospital) => hospital.contactStatus).length;
+  const connectedCount = scopedHospitals.filter((hospital) => hospital.contactStatus === "Connected").length;
 
   return (
     <div className="space-y-6">
@@ -165,7 +320,7 @@ export const HospitalsOperationsPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
             <Building2 className="h-5 w-5" />
@@ -193,6 +348,24 @@ export const HospitalsOperationsPage = () => {
             <p className="mt-0.5 text-xl font-semibold text-slate-900">
               {loading ? "—" : `${categorizedCount} / ${scopedHospitals.length}`}
             </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+            <PhoneCall className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs text-slate-500">Hospitals contacted</p>
+            <p className="mt-0.5 text-xl font-semibold text-slate-900">{loading ? "—" : `${contactedCount} / ${scopedHospitals.length}`}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+            <MessageSquare className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-xs text-slate-500">Connected</p>
+            <p className="mt-0.5 text-xl font-semibold text-slate-900">{loading ? "—" : connectedCount}</p>
           </div>
         </div>
       </div>
@@ -242,6 +415,16 @@ export const HospitalsOperationsPage = () => {
               <option value="">All sources</option>
               {sources.map((value) => <option key={value} value={value}>{value}</option>)}
             </select>
+            <select
+              aria-label="Filter by contact status"
+              value={contactStatusFilter}
+              onChange={(event) => setContactStatusFilter(event.target.value)}
+              className="h-10 min-w-[150px] rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700"
+            >
+              <option value="">All contact statuses</option>
+              <option value="Connected">Connected</option>
+              <option value="Not Connected">Not Connected</option>
+            </select>
             {isSuperAdmin && (
               <select
                 aria-label="Filter by creator"
@@ -257,6 +440,56 @@ export const HospitalsOperationsPage = () => {
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+          {canBulkDeleteHospitals && (
+            <Button
+              variant={isDeleteSelectionMode ? "ghost" : "outline"}
+              size="sm"
+              onClick={() => {
+                setSelectedIds(new Set());
+                setIsDeleteSelectionMode((current) => !current);
+              }}
+              className="h-9 border-slate-200 text-xs"
+            >
+              {isDeleteSelectionMode ? "Cancel selection" : "Select to delete"}
+            </Button>
+          )}
+          {canSelectHospitals && deletableFilteredHospitals.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toggleFilteredSelection(!allFilteredSelected)}
+              className="h-9 border-slate-200 text-xs"
+            >
+              {allFilteredSelected ? "Deselect visible" : "Select visible"}
+            </Button>
+          )}
+          {canSelectHospitals && (
+            <>
+              {selectedDeletableIds.length > 0 && (
+                <span className="text-xs text-slate-500">{selectedDeletableIds.length} selected</span>
+              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setBulkDeleteOpen(true)}
+                disabled={selectedDeletableIds.length === 0}
+                className="h-9 gap-1.5 text-xs"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete selected
+              </Button>
+              {selectedDeletableIds.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="h-9 text-xs"
+                >
+                  Clear
+                </Button>
+              )}
+            </>
+          )}
           <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-xs">
             <button
               onClick={() => setViewMode("table")}
@@ -301,11 +534,11 @@ export const HospitalsOperationsPage = () => {
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
             {listScope === "mine" && scopedHospitals.length === 0
               ? "You have not added any hospitals yet. Hospitals added by other admins and managers are available in All List."
-              : search || typeFilter || specialityFilter || sourceFilter || creatorFilter
+              : search || typeFilter || specialityFilter || sourceFilter || creatorFilter || contactStatusFilter
                 ? "No facilities match the selected search and filters."
                 : "Get started by registering a new facility or uploading a bulk Excel spreadsheet."}
           </p>
-          {!search && !typeFilter && !specialityFilter && !sourceFilter && !creatorFilter && listScope === "all" && (
+          {!search && !typeFilter && !specialityFilter && !sourceFilter && !creatorFilter && !contactStatusFilter && listScope === "all" && (
             <div className="flex items-center justify-center gap-3 mt-4">
               <Link to="/admin/hospitals/new">
                 <Button size="sm" className="text-xs bg-blue-600 hover:bg-blue-700 text-white gap-1.5">
@@ -326,9 +559,33 @@ export const HospitalsOperationsPage = () => {
         /* Table View */
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1380px] text-left text-xs">
+            <table className={`w-full ${isSuperAdmin ? "min-w-[1968px]" : "min-w-[1828px]"} table-fixed text-left text-xs`}>
+              <colgroup>
+                {canSelectHospitals && <col className="w-12" />}
+                <col className="w-[220px]" />
+                <col className="w-[150px]" />
+                <col className="w-[135px]" />
+                <col className="w-[145px]" />
+                <col className="w-[190px]" />
+                <col className="w-[200px]" />
+                <col className="w-[125px]" />
+                <col className="w-[85px]" />
+                <col className="w-[130px]" />
+                <col className="w-[160px]" />
+                {isSuperAdmin && <col className="w-[280px]" />}
+                <col className="w-[100px]" />
+              </colgroup>
               <thead className="bg-slate-50 border-b border-slate-100 text-slate-600 uppercase font-semibold text-[11px] tracking-wider">
                 <tr>
+                  {canSelectHospitals && (
+                    <th className="w-12 px-3 py-3.5">
+                      <Checkbox
+                        aria-label="Select all deletable visible hospitals"
+                        checked={allFilteredSelected}
+                        onCheckedChange={(checked) => toggleFilteredSelection(checked === true)}
+                      />
+                    </th>
+                  )}
                   <th className="px-5 py-3.5">Hospital Name</th>
                   <th className="px-5 py-3.5">Hospital Type</th>
                   <th className="px-5 py-3.5">Speciality</th>
@@ -337,10 +594,10 @@ export const HospitalsOperationsPage = () => {
                   <th className="px-5 py-3.5">Address</th>
                   <th className="px-5 py-3.5">Source</th>
                   <th className="px-5 py-3.5">Vacancy</th>
-                  {isSuperAdmin && <th className="px-5 py-3.5">Added By</th>}
-                  {(isSuperAdmin || filteredHospitals.some((h) => canDeleteHospital(h))) && (
-                    <th className="px-5 py-3.5 text-right">Actions</th>
-                  )}
+                  <th className="px-5 py-3.5">Contact Status</th>
+                  <th className="px-5 py-3.5">Comments</th>
+                  {isSuperAdmin && <th className="px-3 py-3.5">Added By</th>}
+                  <th className="px-3 py-3.5 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -348,6 +605,16 @@ export const HospitalsOperationsPage = () => {
                   const hid = h.id || h._id || "";
                   return (
                     <tr key={hid} className="hover:bg-slate-50/60 transition-colors">
+                      {canSelectHospitals && (
+                        <td className="px-3 py-3.5">
+                          <Checkbox
+                            aria-label={`Select ${h.name}`}
+                            checked={selectedIds.has(hid)}
+                            disabled={!canDeleteHospital(h)}
+                            onCheckedChange={(checked) => toggleHospitalSelection(hid, checked === true)}
+                          />
+                        </td>
+                      )}
                       <td className="px-5 py-3.5 font-semibold text-slate-900">
                         <div className="flex min-w-[180px] max-w-[250px] items-center gap-2.5">
                           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -359,47 +626,75 @@ export const HospitalsOperationsPage = () => {
                       <td className="px-5 py-3.5">{h.hospitalType || <span className="text-slate-300">N/A</span>}</td>
                       <td className="px-5 py-3.5">{h.speciality || <span className="text-slate-300">N/A</span>}</td>
                       <td className="px-5 py-3.5 text-slate-500">
-                        {h.contactNumber ? <span className="inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" />{h.contactNumber}</span> : <span className="text-slate-300">N/A</span>}
+                        {h.contactNumber ? <span className="flex w-full min-w-0 items-start gap-1.5"><Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="min-w-0 whitespace-normal break-all">{h.contactNumber}</span></span> : <span className="text-slate-300">N/A</span>}
                       </td>
                       <td className="px-5 py-3.5 text-slate-500">
-                        {h.email ? <span className="inline-flex max-w-[220px] items-center gap-1.5"><Mail className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" /><span className="truncate">{h.email}</span></span> : <span className="text-slate-300">N/A</span>}
+                        {h.email ? <span className="flex w-full min-w-0 items-start gap-1.5"><Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="min-w-0 whitespace-normal break-all">{h.email}</span></span> : <span className="text-slate-300">N/A</span>}
                       </td>
                       <td className="px-5 py-3.5 text-slate-500">
-                        {h.location ? <span className="inline-flex max-w-sm items-center gap-1.5"><MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400" /><span className="truncate">{h.location}</span></span> : <span className="text-slate-300">N/A</span>}
+                        {h.location ? <span className="flex w-full min-w-0 items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="min-w-0 whitespace-normal break-words">{h.location}</span></span> : <span className="text-slate-300">N/A</span>}
                       </td>
-                      <td className="px-5 py-3.5">{h.source || <span className="text-slate-300">N/A</span>}</td>
-                      <td className="px-5 py-3.5">{h.vacancy ?? <span className="text-slate-300">N/A</span>}</td>
+                      <td className="min-w-0 px-5 py-3.5"><span className="block whitespace-normal break-all">{h.source || <span className="text-slate-300">N/A</span>}</span></td>
+                      <td className="whitespace-nowrap px-5 py-3.5">{hospitalVacancy(h) ?? <span className="text-slate-300">—</span>}</td>
+                      <td className="px-5 py-3.5">
+                        {h.contactStatus ? (
+                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                            h.contactStatus === "Connected"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-amber-50 text-amber-700"
+                          }`}>{h.contactStatus}</span>
+                        ) : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">Not Connected</span>}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-500">
+                        <div className="max-w-[160px]">
+                          {outreachComment(h)
+                            ? <p className="whitespace-normal break-words" title={outreachComment(h)}>{outreachComment(h)}</p>
+                            : <span className="text-slate-300">—</span>}
+                        </div>
+                      </td>
                       {isSuperAdmin && (
-                        <td className="px-5 py-3.5 text-slate-500">
-                          <span className="block max-w-[190px] truncate" title={creatorLabel(h)}>{creatorLabel(h)}</span>
+                        <td className="whitespace-nowrap px-3 py-3.5 text-slate-500">
+                          <span title={creatorLabel(h)}>{creatorLabel(h)}</span>
                         </td>
                       )}
-                      {(isSuperAdmin || filteredHospitals.some((item) => canDeleteHospital(item))) && (
-                        <td className="whitespace-nowrap px-5 py-3.5 text-right">
-                          <div className="flex justify-end gap-1">
-                            {isSuperAdmin && (
-                              <Link
-                                to={`/admin/hospitals/${hid}/edit`}
-                                className="rounded-md p-1.5 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                                title="Edit hospital"
-                                aria-label={`Edit ${h.name}`}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Link>
+                      <td className="px-3 py-3.5 text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="mx-auto h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1"
+                              aria-label={`Actions for ${h.name}`}
+                            >
+                              <MoreHorizontal className="h-5 w-5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-[190px]">
+                            <DropdownMenuItem onSelect={() => openOutreachDialog(h)}>
+                              <PhoneCall className="mr-2 h-4 w-4" />
+                              {h.contactStatus ? "Update outreach" : "Record contact"}
+                            </DropdownMenuItem>
+                            {(isSuperAdmin || isCreatedByUser(h, user)) && (
+                              <DropdownMenuItem asChild>
+                                <Link to={`/admin/hospitals/${hid}/edit`}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit hospital
+                                </Link>
+                              </DropdownMenuItem>
                             )}
                             {canDeleteHospital(h) && (
-                              <button
-                                onClick={() => handleDeleteHospital(hid, h.name)}
-                                className="rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                                title="Delete Hospital"
-                                aria-label={`Delete ${h.name}`}
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onSelect={() => handleDeleteHospital(hid, h.name)}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete hospital
+                              </DropdownMenuItem>
                             )}
-                          </div>
-                        </td>
-                      )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
                     </tr>
                   );
                 })}
@@ -419,6 +714,15 @@ export const HospitalsOperationsPage = () => {
               >
                 <div className="p-4 sm:p-5">
                   <div className="flex items-start gap-3">
+                    {canSelectHospitals && (
+                      <Checkbox
+                        aria-label={`Select ${hospital.name}`}
+                        checked={selectedIds.has(hid)}
+                        disabled={!canDeleteHospital(hospital)}
+                        onCheckedChange={(checked) => toggleHospitalSelection(hid, checked === true)}
+                        className="mt-1 shrink-0"
+                      />
+                    )}
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
                       <Building2 className="h-5 w-5" />
                     </span>
@@ -437,32 +741,62 @@ export const HospitalsOperationsPage = () => {
                             {hospital.speciality}
                           </span>
                         )}
+                        <AlertDialog open={bulkDeleteOpen} onOpenChange={(open) => !isBulkDeleting && setBulkDeleteOpen(open)}>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete selected hospitals?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This permanently deletes {selectedDeletableIds.length} selected hospital
+                                {selectedDeletableIds.length === 1 ? "" : "s"} and removes their access assignments. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  void handleBulkDelete();
+                                }}
+                                disabled={isBulkDeleting || selectedDeletableIds.length === 0}
+                                className="bg-red-600 text-white hover:bg-red-700"
+                              >
+                                {isBulkDeleting ? "Deleting..." : "Delete selected"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
-                    {(isSuperAdmin || canDeleteHospital(hospital)) && (
-                      <div className="flex shrink-0 items-center gap-1">
-                        {isSuperAdmin && (
-                          <Link
-                            to={`/admin/hospitals/${hid}/edit`}
-                            className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                            title="Edit hospital"
-                            aria-label={`Edit ${hospital.name}`}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                        )}
-                        {canDeleteHospital(hospital) && (
-                          <button
-                            onClick={() => handleDeleteHospital(hid, hospital.name)}
-                            className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                            title="Delete Hospital"
-                            aria-label={`Delete ${hospital.name}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1.5 bg-emerald-600 px-2.5 text-[11px] text-white hover:bg-emerald-700"
+                        onClick={() => openOutreachDialog(hospital)}
+                      >
+                        <PhoneCall className="h-3.5 w-3.5" />
+                        {hospital.contactStatus ? "Update contact" : "Record contact"}
+                      </Button>
+                      {(isSuperAdmin || isCreatedByUser(hospital, user)) && (
+                        <Link
+                          to={`/admin/hospitals/${hid}/edit`}
+                          className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
+                          title="Edit hospital"
+                          aria-label={`Edit ${hospital.name}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                      )}
+                      {canDeleteHospital(hospital) && (
+                        <button
+                          onClick={() => handleDeleteHospital(hid, hospital.name)}
+                          className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                          title="Delete Hospital"
+                          aria-label={`Delete ${hospital.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="mt-5 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
@@ -492,7 +826,11 @@ export const HospitalsOperationsPage = () => {
 
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs sm:px-5">
                   <span className="text-slate-500">
-                    <span className="font-medium text-slate-700">Vacancies:</span> {hospital.vacancy ?? "—"}
+                    <span className="font-medium text-slate-700">Contact:</span>{" "}
+                    {hospital.contactStatus || "Not Connected"}
+                  </span>
+                  <span className="text-slate-500">
+                    <span className="font-medium text-slate-700">Vacancy:</span> {hospitalVacancy(hospital) ?? "—"}
                   </span>
                   <span className="text-slate-500">
                     <span className="font-medium text-slate-700">Source:</span> {hospital.source || "—"}
@@ -503,11 +841,78 @@ export const HospitalsOperationsPage = () => {
                     </span>
                   )}
                 </div>
+                {outreachComment(hospital) && (
+                  <div className="space-y-2 border-t border-slate-100 px-4 py-3 text-xs sm:px-5">
+                    <p className="whitespace-pre-wrap break-words text-slate-600">
+                      <span className="font-medium text-slate-800">Comments:</span> {outreachComment(hospital)}
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       )}
+      <Dialog
+        open={Boolean(outreachHospital)}
+        onOpenChange={(open) => {
+          if (!open && !isSavingOutreach) setOutreachHospital(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Hospital outreach</DialogTitle>
+            <DialogDescription>
+              Record contact status, vacancy, and comments for {outreachHospital?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveOutreach} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="contact-status">Contact status</Label>
+              <select
+                id="contact-status"
+                value={contactStatus}
+                onChange={(event) => {
+                  setContactStatus(event.target.value === "Connected" ? "Connected" : "Not Connected");
+                }}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="Connected">Connected</option>
+                <option value="Not Connected">Not Connected</option>
+              </select>
+            </div>
+            {contactStatus === "Connected" && (
+              <div className="space-y-2">
+                <Label htmlFor="outreach-vacancy">Vacancy</Label>
+                <Input
+                  id="outreach-vacancy"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={vacancy}
+                  onChange={(event) => setVacancy(event.target.value)}
+                  placeholder="Enter vacancy count"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="outreach-notes">Comments / notes</Label>
+              <Textarea
+                id="outreach-notes"
+                maxLength={5000}
+                value={outreachNotes}
+                onChange={(event) => setOutreachNotes(event.target.value)}
+                placeholder="Add feedback, follow-up details, or commitments shared by the hospital"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={isSavingOutreach}>
+                {isSavingOutreach ? "Saving..." : "Save outreach details"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

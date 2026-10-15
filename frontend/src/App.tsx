@@ -20,6 +20,7 @@ import ManageTeamsPage from "./pages/ManageTeamsPage";
 import InviteTeamPage from "./pages/InviteTeamPage";
 import HospitalFieldOptionsPage from "./pages/HospitalFieldOptionsPage";
 import NotFound from "./pages/NotFound";
+import HospitalJobsPage from "./pages/HospitalJobsPage";
 
 const queryClient = new QueryClient();
 
@@ -48,12 +49,10 @@ const ProtectedAdminRoute = () => {
     "/admin/users",
     "/admin/hospital-options",
   ];
-  const isHospitalEditPath = /^\/admin\/hospitals\/[^/]+\/edit$/.test(location.pathname);
   if (
     isManagerRole(user.role) &&
     (restrictedPaths.includes(location.pathname) ||
       location.pathname.startsWith("/admin/teams") ||
-      isHospitalEditPath ||
       location.pathname.startsWith("/admin/hospital/") ||
       location.pathname.startsWith("/admin/doctor/"))
   ) {
@@ -86,6 +85,7 @@ const App = () => (
                 <Route path="hospitals" element={<HospitalsOperationsPage />} />
                 <Route path="hospitals/new" element={<AddHospitalPage />} />
                 <Route path="hospitals/:hospitalId/edit" element={<AddHospitalPage />} />
+                <Route path="jobs" element={<HospitalJobsPage />} />
                 <Route path="imports" element={<BulkImportPage />} />
                 <Route path="hospital-options" element={<HospitalFieldOptionsPage />} />
                 <Route path="teams" element={<ManageTeamsPage />} />

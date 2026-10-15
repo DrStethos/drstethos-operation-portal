@@ -24,7 +24,7 @@ const AdminVerify = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [verifications, setVerifications] = useState<VerificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"all" | "pending" | "verified">("pending");
+  const [activeTab, setActiveTab] = useState<"all" | "pending" | "verified">("all");
   const [roleFilter, setRoleFilter] = useState<"all" | "doctor" | "hospital">("all");
 
   useEffect(() => {

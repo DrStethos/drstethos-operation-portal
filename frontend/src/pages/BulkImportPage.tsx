@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import {
@@ -9,10 +10,15 @@ import {
   CheckCircle2, AlertCircle, FileText
 } from "lucide-react";
 
+interface ImportResult {
+  message?: string;
+  jobId?: string;
+}
+
 export const BulkImportPage = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ImportResult | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -35,15 +41,16 @@ export const BulkImportPage = () => {
     formData.append("file", file);
 
     try {
-      const res = await api.post("/imports/hospitals", formData, {
+      const res = await api.post<ImportResult>("/imports/hospitals", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(res.data);
       toast.success(res.data.message || "Bulk hospital ingestion started successfully!");
       setFile(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Upload failed:", error);
-      toast.error(error.response?.data?.error || "Failed to process hospital import.");
+      const message = isAxiosError<{ error?: string }>(error) ? error.response?.data?.error : undefined;
+      toast.error(message || "Failed to process hospital import.");
     } finally {
       setIsUploading(false);
     }
@@ -52,10 +59,10 @@ export const BulkImportPage = () => {
   // Helper to generate a quick CSV / template sample download
   const handleDownloadTemplate = () => {
     const csvContent = "data:text/csv;charset=utf-8," +
-      "Hospital Name,Hospital Type,Hospital Speciality,Phone Number,Email ID,Address,Source,Vacancy\n" +
-      "Apollo Hospitals Jubilee Hills,Multi-speciality,Cardiology,+91 40 2360 7777,contact@apollo.example,Road No 72 Film Nagar Hyderabad,Referral,12\n" +
-      "Care Hospitals Banjara Hills,Multi-speciality,Oncology,+91 40 6165 6565,contact@care.example,Road No 1 Banjara Hills Hyderabad,Website,8\n" +
-      "Yashoda Hospitals Somajiguda,Multi-speciality,Neurology,+91 40 4567 4567,contact@yashoda.example,Raj Bhavan Rd Somajiguda Hyderabad,Directory,5\n";
+      "S.No,Hospital Name,Hospital Type,Hospital Speciality,Location / Full Address,Contact Number,Email Address,Source,Vacancy\n" +
+      "1,Apollo Hospitals Jubilee Hills,Multi-speciality,Cardiology,Road No 72 Film Nagar Hyderabad,+91 40 2360 7777,contact@apollo.example,https://apollo.example,12\n" +
+      "2,Care Hospitals Banjara Hills,Multi-speciality,Oncology,Road No 1 Banjara Hills Hyderabad,+91 40 6165 6565,contact@care.example,https://care.example,8\n" +
+      "3,Yashoda Hospitals Somajiguda,Multi-speciality,Neurology,Raj Bhavan Rd Somajiguda Hyderabad,+91 40 4567 4567,contact@yashoda.example,https://yashoda.example,5\n";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -112,7 +119,7 @@ export const BulkImportPage = () => {
                   Select an Excel workbook (.xlsx, .xls)
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1 mb-4">
-                  File headers: Hospital Name, Hospital Type, Hospital Speciality, Phone Number, Email ID, Address, Source, Vacancy
+                  Headers supported include S.No, Hospital Name, Hospital Type, Hospital Speciality, Location / Full Address, Contact Number, Email Address, Source (or Source Website), and Vacancy.
                 </p>
                 <div className="max-w-xs mx-auto">
                   <Input
@@ -188,7 +195,7 @@ export const BulkImportPage = () => {
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
                 <p className="font-semibold text-slate-800">Other columns (Optional)</p>
-                <p className="text-slate-500">Hospital Type, Hospital Speciality, Phone Number, Email ID, Address, Source, and Vacancy. Vacancy must be a non-negative number.</p>
+                <p className="text-slate-500">Hospital Type, Hospital Speciality, Location / Full Address (or Address), Contact Number (or Phone Number), Email Address (or Email ID), Source (or Source Website), and Vacancy. Vacancy must be a non-negative number. Re-uploading the same records as the same user updates them instead of creating duplicates.</p>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { Badge } from "@/components/ui/badge";
 import { ProfileReviewHeader } from "@/components/admin/profileReview/ProfileReviewHeader";
 import {
@@ -19,13 +19,13 @@ import {
   FileText,
   Calendar,
 } from "lucide-react";
+import { ProfileApprovalConfirmDialog } from "@/components/email/ProfileApprovalConfirmDialog";
+import { ProfileRejectionConfirmDialog } from "@/components/email/ProfileRejectionConfirmDialog";
 import {
   sendApprovalEmail,
   sendRejectionEmail,
 } from "@/helpers/emailHelper";
 import { sendApprovalNotification } from "@/helpers/notificationHelper";
-import { ProfileApprovalConfirmDialog } from "@/components/email/ProfileApprovalConfirmDialog";
-import { ProfileRejectionConfirmDialog } from "@/components/email/ProfileRejectionConfirmDialog";
 
 interface HospitalProfile {
   id: string;
@@ -117,88 +117,74 @@ const HospitalProfile = () => {
 
     setIsProcessing(true);
     try {
-      const currentAdmin = auth.currentUser;
-      if (!currentAdmin) {
-        toast.error("Admin authentication required");
-        setIsProcessing(false);
+      const admin = auth.currentUser;
+      if (!admin) {
+        toast.error("Sign in with an authorized Firebase admin account to verify profiles.");
         return;
       }
 
       const verifiedAt = new Date();
-
-      // Update hospital document (without admin info)
       const hospitalRef = doc(db, "hospitals", profileId);
+      const userRef = doc(db, "users", hospital.userId);
       await updateDoc(hospitalRef, {
         isVerified: true,
-        verifiedAt: verifiedAt,
-        updatedAt: new Date(),
+        verifiedAt,
+        updatedAt: verifiedAt,
       });
-
-      // Update user document with admin information
-      const userRef = doc(db, "users", hospital.userId);
-      const userSnap = await getDoc(userRef);
-      const userData = userSnap.data() as any;
-
       await updateDoc(userRef, {
         isVerified: true,
-        verifiedAt: verifiedAt,
-        verifiedByAdminUid: currentAdmin.uid,
-        verifiedByAdminEmail: currentAdmin.email || "N/A",
+        verifiedAt,
+        verifiedByAdminUid: admin.uid,
+        verifiedByAdminEmail: admin.email || "N/A",
         rejectedAt: null,
         rejectionReason: null,
         rejectedByAdminUid: null,
         rejectedByAdminEmail: null,
       });
 
-      // Update local state
-      setHospital({
-        ...hospital,
-        isVerified: true,
-      });
-
-      setUserData({
-        ...userData,
-        verifiedAt: verifiedAt,
-        verifiedByAdminUid: currentAdmin.uid,
-        verifiedByAdminEmail: currentAdmin.email || "N/A",
+      const userSnapshot = await getDoc(userRef);
+      const user = userSnapshot.data();
+      setHospital((current) => current ? { ...current, isVerified: true, verifiedAt, updatedAt: verifiedAt } : current);
+      setUserData((current) => ({
+        ...current,
+        verifiedAt,
+        verifiedByAdminUid: admin.uid,
+        verifiedByAdminEmail: admin.email || "N/A",
         rejectedAt: null,
         rejectionReason: null,
         rejectedByAdminUid: null,
         rejectedByAdminEmail: null,
-      });
-      console.log("Hospital approved:", hospital.name);
+      }));
 
-      // Send FCM notification via Cloud Function
-      if (userData?.fcmToken) {
+      if (typeof user?.fcmToken === "string" && user.fcmToken) {
         try {
           await sendApprovalNotification({
             userId: hospital.userId,
-            fcmToken: userData.fcmToken,
+            fcmToken: user.fcmToken,
             name: hospital.name,
             status: "APPROVED",
             profileType: "HOSPITAL",
             profileId,
           });
-          toast.success("Notification sent to hospital");
-        } catch (notifError) {
-          console.error("FCM notification error:", notifError);
-          toast.warning("Profile verified, but notification failed");
+        } catch (notificationError) {
+          console.error("Hospital approval notification failed:", notificationError);
+          toast.warning("Hospital verified, but the notification could not be sent.");
         }
       }
 
-      // Send approval email
-      await sendApprovalEmail({
+      const emailSent = await sendApprovalEmail({
         toEmail: hospital.email,
         profileName: hospital.name,
         profileType: "Hospital",
         dashboardLink: "https://drstethos.com",
       });
-
-      toast.success("Hospital verified successfully");
       setShowApproveDialog(false);
+      toast.success(emailSent
+        ? "Hospital verified successfully."
+        : "Hospital verified, but the email could not be sent.");
     } catch (error) {
       console.error("Error approving hospital:", error);
-      toast.error("Failed to verify hospital");
+      toast.error("Failed to verify hospital. Check Firebase admin access and try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -217,83 +203,70 @@ const HospitalProfile = () => {
 
     setIsProcessing(true);
     try {
-      const currentAdmin = auth.currentUser;
-      if (!currentAdmin) {
-        toast.error("Admin authentication required");
-        setIsProcessing(false);
+      const admin = auth.currentUser;
+      if (!admin) {
+        toast.error("Sign in with an authorized Firebase admin account to verify profiles.");
         return;
       }
 
       const rejectedAt = new Date();
-
-      // Update hospital document
+      const reason = rejectionReason.trim();
       const hospitalRef = doc(db, "hospitals", profileId);
+      const userRef = doc(db, "users", hospital.userId);
       await updateDoc(hospitalRef, {
         isVerified: false,
         updatedAt: rejectedAt,
       });
-
-      // Update user document with rejection reason and admin info
-      const userRef = doc(db, "users", hospital.userId);
-      const userSnap = await getDoc(userRef);
-      const userData = userSnap.data() as any;
-
       await updateDoc(userRef, {
         isVerified: false,
-        rejectionReason: rejectionReason.trim(),
-        rejectedAt: rejectedAt,
-        rejectedByAdminUid: currentAdmin.uid,
-        rejectedByAdminEmail: currentAdmin.email || "N/A",
+        rejectionReason: reason,
+        rejectedAt,
+        rejectedByAdminUid: admin.uid,
+        rejectedByAdminEmail: admin.email || "N/A",
       });
 
-      // Update local state
-      setHospital({
-        ...hospital,
-        isVerified: false,
-      });
+      const userSnapshot = await getDoc(userRef);
+      const user = userSnapshot.data();
+      setHospital((current) => current ? { ...current, isVerified: false } : current);
+      setUserData((current) => ({
+        ...current,
+        rejectedAt,
+        rejectionReason: reason,
+        rejectedByAdminUid: admin.uid,
+        rejectedByAdminEmail: admin.email || "N/A",
+      }));
 
-      setUserData({
-        ...userData,
-        rejectedAt: rejectedAt,
-        rejectionReason: rejectionReason.trim(),
-        rejectedByAdminUid: currentAdmin.uid,
-        rejectedByAdminEmail: currentAdmin.email || "N/A",
-      });
-
-      setShowRejectDialog(false);
-
-      // Send FCM notification via Cloud Function
-      if (userData?.fcmToken) {
+      if (typeof user?.fcmToken === "string" && user.fcmToken) {
         try {
           await sendApprovalNotification({
             userId: hospital.userId,
-            fcmToken: userData.fcmToken,
+            fcmToken: user.fcmToken,
             name: hospital.name,
             status: "REJECTED",
-            rejectionReason: rejectionReason.trim(),
+            rejectionReason: reason,
             profileType: "HOSPITAL",
             profileId,
           });
-          toast.success("Rejection notification sent to hospital");
-        } catch (notifError) {
-          console.error("FCM notification error:", notifError);
-          toast.warning("Profile rejected, but notification failed");
+        } catch (notificationError) {
+          console.error("Hospital rejection notification failed:", notificationError);
+          toast.warning("Hospital rejection was saved, but the notification could not be sent.");
         }
       }
 
-      // Send rejection email
-      await sendRejectionEmail({
+      const emailSent = await sendRejectionEmail({
         toEmail: hospital.email,
         profileName: hospital.name,
         profileType: "Hospital",
-        rejectionReason: rejectionReason,
+        rejectionReason: reason,
       });
-
+      setShowRejectDialog(false);
       setRejectionReason("");
-      toast.error("Hospital verification rejected");
+      toast.success(emailSent
+        ? "Hospital rejection saved successfully."
+        : "Hospital rejection saved, but the email could not be sent.");
     } catch (error) {
       console.error("Error rejecting hospital:", error);
-      toast.error("Failed to reject verification");
+      toast.error("Failed to reject hospital. Check Firebase admin access and try again.");
     } finally {
       setIsProcessing(false);
     }

@@ -100,7 +100,7 @@ export const AddHospitalPage = () => {
         await api.post("/hospitals", hospitalData);
       }
       toast.success(isEditing ? `Hospital "${name}" updated successfully!` : `Facility "${name}" created successfully!`);
-      navigate("/admin/hospitals");
+      navigate("/admin/hospitals?scope=mine");
     } catch (error: unknown) {
       console.error("Error creating hospital:", error);
       const message = isAxiosError<{ message?: string }>(error) ? error.response?.data?.message : undefined;
@@ -241,10 +241,10 @@ export const AddHospitalPage = () => {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="source" className="text-xs font-semibold text-slate-700">Source</Label>
+              <Label htmlFor="source" className="text-xs font-semibold text-slate-700">Source / Website</Label>
               <Input
                 id="source"
-                placeholder="e.g. Referral, Website"
+                placeholder="e.g. www.hospital.com or Referral"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 className="h-10 bg-slate-50/50 text-sm"

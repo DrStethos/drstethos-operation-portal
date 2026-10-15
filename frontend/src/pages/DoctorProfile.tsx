@@ -6,10 +6,8 @@ import {
   updateDoc,
   collection,
   getDocs,
-  addDoc,
-  serverTimestamp,
 } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 
 import { ProfileReviewHeader } from "@/components/admin/profileReview/ProfileReviewHeader";
 import {
@@ -31,14 +29,11 @@ import {
   Award,
   Calendar,
 } from "lucide-react";
-
 import {
   sendApprovalEmail,
   sendRejectionEmail,
 } from "@/helpers/emailHelper";
-import {
-  sendApprovalNotification,
-} from "@/helpers/notificationHelper";
+import { sendApprovalNotification } from "@/helpers/notificationHelper";
 
 interface Certificate {
   id: string;
@@ -123,54 +118,6 @@ const DoctorProfile = () => {
     }
   };
 
-  // Firestore queue utility
-  const enqueueNotifications = async (
-    userId: string,
-    name: string,
-    email: string | undefined,
-    fcmToken: string | undefined,
-    applicationId: string,
-    status: "APPROVED" | "REJECTED"
-  ) => {
-    try {
-      const subject =
-        status === "APPROVED"
-          ? "Your Application Has Been Approved 🎉"
-          : "Update on Your Application";
-
-      const text =
-        status === "APPROVED"
-          ? `Hi ${name}, your profile (ID ${applicationId}) has been approved.`
-          : `Hi ${name}, your profile (ID ${applicationId}) was not approved.`;
-
-      const html =
-        status === "APPROVED"
-          ? `<p>Hi ${name},</p><p>Your profile has been approved.</p>`
-          : `<p>Hi ${name},</p><p>Your profile was not approved.</p>`;
-
-      if (email) {
-        await addDoc(collection(db, "mail"), {
-          to: email,
-          message: { subject, text, html },
-          createdAt: serverTimestamp(),
-        });
-      }
-
-      if (fcmToken) {
-        await addDoc(collection(db, "fcm_messages"), {
-          token: fcmToken,
-          notification: {
-            title: subject,
-            body: text,
-          },
-          createdAt: serverTimestamp(),
-        });
-      }
-    } catch (err) {
-      console.error("Notification enqueue error:", err);
-    }
-  };
-
   // Approve doctor
   const handleApprove = async () => {
     if (!doctor || !profileId) return;
@@ -179,38 +126,34 @@ const DoctorProfile = () => {
     try {
       const admin = auth.currentUser;
       if (!admin) {
-        toast.error("Admin authentication required");
+        toast.error("Sign in with an authorized Firebase admin account to verify profiles.");
         return;
       }
 
+      const verifiedAt = new Date();
       const doctorRef = doc(db, "doctors", profileId);
+      const userRef = doc(db, "users", doctor.userId);
       await updateDoc(doctorRef, {
         isVerified: true,
-        verifiedAt: new Date(),
-        updatedAt: new Date(),
+        verifiedAt,
+        updatedAt: verifiedAt,
       });
-
-      const userRef = doc(db, "users", doctor.userId);
       await updateDoc(userRef, {
         isVerified: true,
-        verifiedAt: new Date(),
+        verifiedAt,
         verifiedByAdminUid: admin.uid,
         verifiedByAdminEmail: admin.email || "N/A",
+        rejectedAt: null,
+        rejectionReason: null,
+        rejectedByAdminUid: null,
+        rejectedByAdminEmail: null,
       });
 
-      const userSnap = await getDoc(userRef);
-      const userData = userSnap.data() as any;
+      const userSnapshot = await getDoc(userRef);
+      const userData = userSnapshot.data();
+      setDoctor({ ...doctor, isVerified: true, verifiedAt, updatedAt: verifiedAt });
 
-      await enqueueNotifications(
-        doctor.userId,
-        doctor.name,
-        userData?.email,
-        userData?.fcmToken,
-        profileId,
-        "APPROVED"
-      );
-
-      if (userData?.fcmToken) {
+      if (typeof userData?.fcmToken === "string" && userData.fcmToken) {
         try {
           await sendApprovalNotification({
             userId: doctor.userId,
@@ -220,26 +163,25 @@ const DoctorProfile = () => {
             profileType: "DOCTOR",
             profileId,
           });
-          toast.success("Notification sent to doctor");
-        } catch (notifError) {
-          console.error("FCM notification error:", notifError);
-          toast.warning("Profile verified, but notification failed");
+        } catch (notificationError) {
+          console.error("Doctor approval notification failed:", notificationError);
+          toast.warning("Doctor verified, but the notification could not be sent.");
         }
       }
 
-      await sendApprovalEmail({
+      const emailSent = await sendApprovalEmail({
         toEmail: doctor.email,
         profileName: doctor.name,
         profileType: "Doctor",
         dashboardLink: "https://drstethos.com",
       });
-
-      setDoctor({ ...doctor, isVerified: true });
       setShowApproveDialog(false);
-      toast.success("Doctor verified successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Verification failed");
+      toast.success(emailSent
+        ? "Doctor verified successfully."
+        : "Doctor verified, but the email could not be sent.");
+    } catch (error) {
+      console.error("Error approving doctor:", error);
+      toast.error("Failed to verify doctor. Check Firebase admin access and try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -258,70 +200,59 @@ const DoctorProfile = () => {
     try {
       const admin = auth.currentUser;
       if (!admin) {
-        toast.error("Admin authentication required");
-        setIsProcessing(false);
+        toast.error("Sign in with an authorized Firebase admin account to verify profiles.");
         return;
       }
 
+      const rejectedAt = new Date();
+      const reason = rejectionReason.trim();
       const doctorRef = doc(db, "doctors", profileId);
+      const userRef = doc(db, "users", doctor.userId);
       await updateDoc(doctorRef, {
         isVerified: false,
-        updatedAt: new Date(),
+        updatedAt: rejectedAt,
       });
-
-      const userRef = doc(db, "users", doctor.userId);
       await updateDoc(userRef, {
         isVerified: false,
-        rejectionReason,
-        rejectedAt: new Date(),
+        rejectionReason: reason,
+        rejectedAt,
         rejectedByAdminUid: admin.uid,
         rejectedByAdminEmail: admin.email || "N/A",
       });
 
-      const userSnap = await getDoc(userRef);
-      const userData = userSnap.data() as any;
+      const userSnapshot = await getDoc(userRef);
+      const userData = userSnapshot.data();
+      setDoctor({ ...doctor, isVerified: false, updatedAt: rejectedAt });
 
-      await enqueueNotifications(
-        doctor.userId,
-        doctor.name,
-        userData?.email,
-        userData?.fcmToken,
-        profileId,
-        "REJECTED"
-      );
-
-      // Send FCM notification via Cloud Function
-      if (userData?.fcmToken) {
+      if (typeof userData?.fcmToken === "string" && userData.fcmToken) {
         try {
           await sendApprovalNotification({
             userId: doctor.userId,
             fcmToken: userData.fcmToken,
             name: doctor.name,
             status: "REJECTED",
-            rejectionReason: rejectionReason.trim(),
+            rejectionReason: reason,
             profileType: "DOCTOR",
             profileId,
           });
-          toast.success("Rejection notification sent to doctor");
-        } catch (notifError) {
-          console.error("FCM notification error:", notifError);
-          toast.warning("Profile rejected, but notification failed");
+        } catch (notificationError) {
+          console.error("Doctor rejection notification failed:", notificationError);
+          toast.warning("Doctor rejection was saved, but the notification could not be sent.");
         }
       }
 
-      // Send rejection email
-      await sendRejectionEmail({
+      const emailSent = await sendRejectionEmail({
         toEmail: doctor.email,
         profileName: doctor.name,
         profileType: "Doctor",
-        rejectionReason,
+        rejectionReason: reason,
       });
-
-      setDoctor({ ...doctor, isVerified: false });
-      toast.error("Doctor verification rejected");
-    } catch (err) {
-      console.error(err);
-      toast.error("Rejection failed");
+      toast.success(emailSent
+        ? "Doctor rejection saved successfully."
+        : "Doctor rejection saved, but the email could not be sent.");
+    } catch (error) {
+      console.error("Error rejecting doctor:", error);
+      toast.error("Failed to reject doctor. Check Firebase admin access and try again.");
     } finally {
       setIsProcessing(false);
       setShowRejectDialog(false);

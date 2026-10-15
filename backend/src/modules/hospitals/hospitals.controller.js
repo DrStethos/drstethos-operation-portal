@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteHospital = exports.updateHospital = exports.createHospital = exports.getHospitalById = exports.getAllHospitals = void 0;
+exports.deleteHospitals = exports.deleteHospital = exports.removeHospitalVacancy = exports.updateHospitalOutreach = exports.updateHospital = exports.createHospital = exports.getHospitalById = exports.getAllHospitals = void 0;
 const hospitals_service_1 = require("./hospitals.service");
 const getAllHospitals = async (req, res) => {
     try {
@@ -51,7 +51,8 @@ const updateHospital = async (req, res) => {
         if (error.message === 'Hospital not found') {
             res.status(404).json({ message: error.message });
         }
-        else if (error.message === 'Unauthorized to access this hospital') {
+        else if (error.message === 'Unauthorized to access this hospital' ||
+            error.message === 'You can only edit hospitals you added') {
             res.status(403).json({ message: error.message });
         }
         else {
@@ -60,6 +61,50 @@ const updateHospital = async (req, res) => {
     }
 };
 exports.updateHospital = updateHospital;
+const updateHospitalOutreach = async (req, res) => {
+    try {
+        const hospitalId = String(req.params.id);
+        const hospital = await hospitals_service_1.hospitalsService.updateOutreach(hospitalId, req.body, req.user);
+        res.json(hospital);
+    }
+    catch (error) {
+        if (error.message === 'Invalid hospital ID' || error.message === 'Invalid hospital outreach details') {
+            res.status(400).json({ message: error.message });
+        }
+        else if (error.message === 'Hospital not found') {
+            res.status(404).json({ message: error.message });
+        }
+        else if (error.message === 'You can only edit hospitals you added') {
+            res.status(403).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: error.message || 'Internal Server Error' });
+        }
+    }
+};
+exports.updateHospitalOutreach = updateHospitalOutreach;
+const removeHospitalVacancy = async (req, res) => {
+    try {
+        const hospitalId = String(req.params.id);
+        const hospital = await hospitals_service_1.hospitalsService.removeHospitalVacancy(hospitalId, req.user);
+        res.json(hospital);
+    }
+    catch (error) {
+        if (error.message === 'Invalid hospital ID') {
+            res.status(400).json({ message: error.message });
+        }
+        else if (error.message === 'Hospital not found') {
+            res.status(404).json({ message: error.message });
+        }
+        else if (error.message === 'You can only edit hospitals you added') {
+            res.status(403).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: error.message || 'Internal Server Error' });
+        }
+    }
+};
+exports.removeHospitalVacancy = removeHospitalVacancy;
 const deleteHospital = async (req, res) => {
     try {
         const hospitalId = String(req.params.id);
@@ -80,4 +125,25 @@ const deleteHospital = async (req, res) => {
     }
 };
 exports.deleteHospital = deleteHospital;
+const deleteHospitals = async (req, res) => {
+    try {
+        const result = await hospitals_service_1.hospitalsService.deleteHospitals(req.body?.ids, req.user);
+        res.json(result);
+    }
+    catch (error) {
+        if (error.message === 'Unauthorized to delete this hospital' ||
+            error.message === 'Bulk deletion is only allowed for hospitals in your My List') {
+            res.status(403).json({ message: error.message });
+        }
+        else if (error.message === 'Select at least one hospital to delete' ||
+            error.message === 'One or more hospital IDs are invalid' ||
+            error.message === 'One or more hospitals were not found') {
+            res.status(400).json({ message: error.message });
+        }
+        else {
+            res.status(500).json({ message: error.message || 'Internal Server Error' });
+        }
+    }
+};
+exports.deleteHospitals = deleteHospitals;
 //# sourceMappingURL=hospitals.controller.js.map

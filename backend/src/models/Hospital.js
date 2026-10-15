@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Hospital = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const HospitalSchema = new mongoose_1.Schema({
+    serialNumber: { type: String, trim: true },
     name: { type: String, required: true, trim: true },
     hospitalType: { type: String, trim: true },
     speciality: { type: String, trim: true },
@@ -44,6 +45,10 @@ const HospitalSchema = new mongoose_1.Schema({
     email: { type: String, trim: true, lowercase: true },
     source: { type: String, trim: true },
     vacancy: { type: Number, min: 0 },
+    contactStatus: { type: String, enum: ['Connected', 'Not Connected'] },
+    outreachVacancies: { type: Number, min: 0, validate: Number.isInteger },
+    outreachNotes: { type: String, trim: true, maxlength: 5000 },
+    hospitalCommitments: { type: String, trim: true, maxlength: 5000 },
     createdById: { type: String, trim: true },
     createdByName: { type: String, trim: true },
     createdByEmail: { type: String, trim: true, lowercase: true },
