@@ -45,7 +45,7 @@ const HospitalSchema = new mongoose_1.Schema({
     email: { type: String, trim: true, lowercase: true },
     source: { type: String, trim: true },
     vacancy: { type: Number, min: 0 },
-    contactStatus: { type: String, enum: ['Connected', 'Not Connected'] },
+    contactStatus: { type: String, enum: ['Connected', 'Not Connected', 'Connected but Not Lifted'] },
     outreachVacancies: { type: Number, min: 0, validate: Number.isInteger },
     outreachNotes: { type: String, trim: true, maxlength: 5000 },
     hospitalCommitments: { type: String, trim: true, maxlength: 5000 },

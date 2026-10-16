@@ -10,7 +10,7 @@ export interface IHospital {
     email?: string;
     source?: string;
     vacancy?: number;
-    contactStatus?: 'Connected' | 'Not Connected' | null;
+    contactStatus?: 'Connected' | 'Not Connected' | 'Connected but Not Lifted' | null;
     outreachVacancies?: number | null;
     outreachNotes?: string | null;
     hospitalCommitments?: string | null;

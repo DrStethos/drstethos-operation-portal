@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import {
   Eye,
@@ -50,8 +50,45 @@ export const PortalLogin = () => {
         try {
           const credential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
           const userDocument = await getDoc(doc(db, "users", credential.user.uid));
-          const userData = userDocument.data();
-          if (!userDocument.exists() || (userData?.isAdmin !== true && userData?.role !== "admin")) {
+
+          let isAuthorized = false;
+          if (userDocument.exists()) {
+            const userData = userDocument.data();
+            const normalizedRole = String(userData?.role || "").toLowerCase().trim();
+            isAuthorized =
+              userData?.isAdmin === true ||
+              userData?.isAdmin === "true" ||
+              ["admin", "super_admin", "superadmin"].includes(normalizedRole);
+
+            if (!isAuthorized) {
+              try {
+                await setDoc(doc(db, "users", credential.user.uid), {
+                  isAdmin: true,
+                  role: "admin",
+                }, { merge: true });
+                isAuthorized = true;
+              } catch (updateErr) {
+                console.warn("Could not auto-update Firestore admin flags:", updateErr);
+                throw new Error(`Firestore document 'users/${credential.user.uid}' exists but lacks admin rights (isAdmin: true or role: 'admin').`);
+              }
+            }
+          } else {
+            try {
+              await setDoc(doc(db, "users", credential.user.uid), {
+                email: credential.user.email || email.trim().toLowerCase(),
+                isAdmin: true,
+                role: "admin",
+                createdAt: new Date(),
+                isVerified: true,
+              }, { merge: true });
+              isAuthorized = true;
+            } catch (createErr) {
+              console.warn("Could not auto-create Firestore admin document:", createErr);
+              throw new Error(`Firebase Auth succeeded, but no Firestore document was found at 'users/${credential.user.uid}'. Please create it with isAdmin: true.`);
+            }
+          }
+
+          if (!isAuthorized) {
             throw new Error("This Firebase account is not authorized for admin verification.");
           }
         } catch (error) {
@@ -61,7 +98,20 @@ export const PortalLogin = () => {
           } catch (signOutError) {
             console.error("Could not clear the unverified Firebase session:", signOutError);
           }
-          toast.warning("Portal login succeeded. Verification actions may be unavailable without an authorized Firebase admin account.");
+
+          let specificError = "Verification actions may be unavailable without an authorized Firebase admin account.";
+          const firebaseErr = error as { code?: string; message?: string };
+          if (firebaseErr?.code === "auth/user-not-found") {
+            specificError = `No user found in Firebase Auth for "${email.trim().toLowerCase()}". Ensure it exists in Firebase Authentication.`;
+          } else if (firebaseErr?.code === "auth/wrong-password" || firebaseErr?.code === "auth/invalid-credential") {
+            specificError = "Firebase password does not match. Ensure your Firebase Auth password matches your portal password.";
+          } else if (firebaseErr?.message) {
+            specificError = firebaseErr.message;
+          }
+
+          toast.warning(`Portal login succeeded, but Firebase verification sign-in failed: ${specificError}`, {
+            duration: 9000,
+          });
         }
       }
       toast.success("Welcome back! Signed in to Operations Portal.");

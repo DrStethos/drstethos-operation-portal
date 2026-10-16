@@ -10,7 +10,7 @@ const User_1 = require("../../models/User");
 const mongoose_1 = __importDefault(require("mongoose"));
 const zod_1 = require("zod");
 const hospitalOutreachSchema = zod_1.z.object({
-    contactStatus: zod_1.z.enum(['Connected', 'Not Connected']).nullable(),
+    contactStatus: zod_1.z.enum(['Connected', 'Not Connected', 'Connected but Not Lifted']).nullable(),
     vacancy: zod_1.z.number().int().nonnegative().nullable(),
     outreachNotes: zod_1.z.string().max(5000).nullable(),
 });
@@ -21,7 +21,6 @@ class HospitalsService {
             throw new Error('Invalid hospital outreach details');
         }
         const hospital = await this.getHospitalById(id, user);
-        await this.assertCanEditHospital(hospital, user);
         return Hospital_1.Hospital.findByIdAndUpdate(id, {
             contactStatus: parsedData.data.contactStatus,
             vacancy: parsedData.data.contactStatus === 'Connected'

@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Building2, Plus, Upload, Search, Phone, MapPin, Mail, BriefcaseBusiness,
-  Trash2, RefreshCw, Loader2, Hospital, Pencil, Filter, MessageSquare, PhoneCall,
+  Trash2, RefreshCw, Loader2, Hospital, Filter, MessageSquare, PhoneCall,
   MoreHorizontal
 } from "lucide-react";
 
@@ -51,7 +51,7 @@ interface HospitalItem {
   email?: string;
   source?: string;
   vacancy?: number | null;
-  contactStatus?: "Connected" | "Not Connected" | null;
+  contactStatus?: "Connected" | "Not Connected" | "Connected but Not Lifted" | null;
   outreachVacancies?: number | null;
   outreachNotes?: string | null;
   hospitalCommitments?: string | null;
@@ -101,7 +101,7 @@ export const HospitalsOperationsPage = () => {
   const [creatorFilter, setCreatorFilter] = useState("");
   const [contactStatusFilter, setContactStatusFilter] = useState("");
   const [outreachHospital, setOutreachHospital] = useState<HospitalItem | null>(null);
-  const [contactStatus, setContactStatus] = useState<"Connected" | "Not Connected">("Not Connected");
+  const [contactStatus, setContactStatus] = useState<"Connected" | "Not Connected" | "Connected but Not Lifted">("Not Connected");
   const [vacancy, setVacancy] = useState("");
   const [outreachNotes, setOutreachNotes] = useState("");
   const [isSavingOutreach, setIsSavingOutreach] = useState(false);
@@ -424,6 +424,7 @@ export const HospitalsOperationsPage = () => {
               <option value="">All contact statuses</option>
               <option value="Connected">Connected</option>
               <option value="Not Connected">Not Connected</option>
+              <option value="Connected but Not Lifted">Connected but Not Lifted</option>
             </select>
             {isSuperAdmin && (
               <select
@@ -559,26 +560,26 @@ export const HospitalsOperationsPage = () => {
         /* Table View */
         <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className={`w-full ${isSuperAdmin ? "min-w-[1968px]" : "min-w-[1828px]"} table-fixed text-left text-xs`}>
+            <table className="w-full min-w-[1200px] table-fixed text-left text-[8px] leading-tight xl:min-w-0">
               <colgroup>
-                {canSelectHospitals && <col className="w-12" />}
-                <col className="w-[220px]" />
-                <col className="w-[150px]" />
-                <col className="w-[135px]" />
-                <col className="w-[145px]" />
-                <col className="w-[190px]" />
-                <col className="w-[200px]" />
-                <col className="w-[125px]" />
-                <col className="w-[85px]" />
-                <col className="w-[130px]" />
-                <col className="w-[160px]" />
-                {isSuperAdmin && <col className="w-[280px]" />}
-                <col className="w-[100px]" />
+                {canSelectHospitals && <col className="w-[3%]" />}
+                <col className={isSuperAdmin ? "w-[13%]" : canSelectHospitals ? "w-[14%]" : "w-[15%]"} />
+                <col className={isSuperAdmin ? "w-[7%]" : canSelectHospitals ? "w-[8%]" : "w-[8%]"} />
+                <col className={isSuperAdmin ? "w-[7%]" : canSelectHospitals ? "w-[8%]" : "w-[8%]"} />
+                <col className={isSuperAdmin ? "w-[8%]" : canSelectHospitals ? "w-[9%]" : "w-[9%]"} />
+                <col className={isSuperAdmin ? "w-[9%]" : "w-[11%]"} />
+                <col className={isSuperAdmin ? "w-[9%]" : canSelectHospitals ? "w-[10%]" : "w-[10%]"} />
+                <col className={isSuperAdmin ? "w-[5%]" : "w-[6%]"} />
+                <col className="w-[8%]" />
+                <col className={isSuperAdmin ? "w-[8%]" : "w-[9%]"} />
+                <col className={isSuperAdmin ? "w-[7%]" : "w-[7%]"} />
+                {isSuperAdmin && <col className={canSelectHospitals ? "w-[9%]" : "w-[11%]"} />}
+                <col className={isSuperAdmin ? canSelectHospitals ? "w-[5%]" : "w-[6%]" : canSelectHospitals ? "w-[4%]" : "w-[6%]"} />
               </colgroup>
-              <thead className="bg-slate-50 border-b border-slate-100 text-slate-600 uppercase font-semibold text-[11px] tracking-wider">
+              <thead className="bg-slate-50 border-b border-slate-100 text-slate-600 uppercase font-semibold text-[8px] tracking-[0.04em]">
                 <tr>
                   {canSelectHospitals && (
-                    <th className="w-12 px-3 py-3.5">
+                    <th className="px-1.5 py-2">
                       <Checkbox
                         aria-label="Select all deletable visible hospitals"
                         checked={allFilteredSelected}
@@ -586,27 +587,27 @@ export const HospitalsOperationsPage = () => {
                       />
                     </th>
                   )}
-                  <th className="px-5 py-3.5">Hospital Name</th>
-                  <th className="px-5 py-3.5">Hospital Type</th>
-                  <th className="px-5 py-3.5">Speciality</th>
-                  <th className="px-5 py-3.5">Phone Number</th>
-                  <th className="px-5 py-3.5">Email ID</th>
-                  <th className="px-5 py-3.5">Address</th>
-                  <th className="px-5 py-3.5">Source</th>
-                  <th className="px-5 py-3.5">Vacancy</th>
-                  <th className="px-5 py-3.5">Contact Status</th>
-                  <th className="px-5 py-3.5">Comments</th>
-                  {isSuperAdmin && <th className="px-3 py-3.5">Added By</th>}
-                  <th className="px-3 py-3.5 text-center">Actions</th>
+                  <th title="Hospital name" className="border-r border-slate-300 px-2 py-2">Hospital</th>
+                  <th title="Hospital type" className="border-r border-slate-300 px-2 py-2">Type</th>
+                  <th className="border-r border-slate-300 px-2 py-2">Speciality</th>
+                  <th title="Phone number" className="border-r border-slate-300 px-2 py-2">Phone</th>
+                  <th title="Email address" className="border-r border-slate-300 px-2 py-2">Email</th>
+                  <th className="border-r border-slate-300 px-2 py-2">Address</th>
+                  <th className="border-r border-slate-300 px-2 py-2">Source</th>
+                  <th className="whitespace-nowrap border-r border-slate-300 px-2 py-2">Vacancy</th>
+                  <th title="Contact status" className="border-r border-slate-300 px-2 py-2">Status</th>
+                  <th title="Comments and notes" className="border-r border-slate-300 px-2 py-2">Notes</th>
+                  {isSuperAdmin && <th title="Added by" className="border-r border-slate-300 px-2 py-2">Creator</th>}
+                  <th className="break-words px-1 py-2 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody className="divide-y divide-slate-100 text-[8px] text-slate-700">
                 {filteredHospitals.map((h) => {
                   const hid = h.id || h._id || "";
                   return (
                     <tr key={hid} className="hover:bg-slate-50/60 transition-colors">
                       {canSelectHospitals && (
-                        <td className="px-3 py-3.5">
+                        <td className="px-1.5 py-2">
                           <Checkbox
                             aria-label={`Select ${h.name}`}
                             checked={selectedIds.has(hid)}
@@ -615,59 +616,59 @@ export const HospitalsOperationsPage = () => {
                           />
                         </td>
                       )}
-                      <td className="px-5 py-3.5 font-semibold text-slate-900">
-                        <div className="flex min-w-[180px] max-w-[250px] items-center gap-2.5">
-                          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                            <Building2 className="h-4 w-4" />
+                      <td className="break-words px-1.5 py-2 font-semibold text-slate-900">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                            <Building2 className="h-3.5 w-3.5" />
                           </div>
                           <span className="whitespace-normal break-words leading-5">{h.name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5">{h.hospitalType || <span className="text-slate-300">N/A</span>}</td>
-                      <td className="px-5 py-3.5">{h.speciality || <span className="text-slate-300">N/A</span>}</td>
-                      <td className="px-5 py-3.5 text-slate-500">
-                        {h.contactNumber ? <span className="flex w-full min-w-0 items-start gap-1.5"><Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="min-w-0 whitespace-normal break-all">{h.contactNumber}</span></span> : <span className="text-slate-300">N/A</span>}
+                      <td className="break-words px-1.5 py-2">{h.hospitalType || <span className="text-slate-300">N/A</span>}</td>
+                      <td className="break-words px-1.5 py-2">{h.speciality || <span className="text-slate-300">N/A</span>}</td>
+                      <td className="break-words px-1.5 py-2 text-slate-500">
+                        {h.contactNumber ? <span className="min-w-0 whitespace-normal break-all">{h.contactNumber}</span> : <span className="text-slate-300">N/A</span>}
                       </td>
-                      <td className="px-5 py-3.5 text-slate-500">
-                        {h.email ? <span className="flex w-full min-w-0 items-start gap-1.5"><Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="min-w-0 whitespace-normal break-all">{h.email}</span></span> : <span className="text-slate-300">N/A</span>}
+                      <td className="break-all px-1.5 py-2 text-slate-500">
+                        {h.email ? <span className="min-w-0 whitespace-normal break-all">{h.email}</span> : <span className="text-slate-300">N/A</span>}
                       </td>
-                      <td className="px-5 py-3.5 text-slate-500">
-                        {h.location ? <span className="flex w-full min-w-0 items-start gap-1.5"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="min-w-0 whitespace-normal break-words">{h.location}</span></span> : <span className="text-slate-300">N/A</span>}
+                      <td className="break-words px-1.5 py-2 text-slate-500">
+                        {h.location ? <span className="min-w-0 whitespace-normal break-words">{h.location}</span> : <span className="text-slate-300">N/A</span>}
                       </td>
-                      <td className="min-w-0 px-5 py-3.5"><span className="block whitespace-normal break-all">{h.source || <span className="text-slate-300">N/A</span>}</span></td>
-                      <td className="whitespace-nowrap px-5 py-3.5">{hospitalVacancy(h) ?? <span className="text-slate-300">—</span>}</td>
-                      <td className="px-5 py-3.5">
+                      <td className="break-words px-1.5 py-2">{h.source || <span className="text-slate-300">N/A</span>}</td>
+                      <td className="break-words px-1.5 py-2">{hospitalVacancy(h) ?? <span className="text-slate-300">—</span>}</td>
+                      <td className="break-words px-1.5 py-2">
                         {h.contactStatus ? (
-                          <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                          <span className={`inline-block rounded-full px-1.5 py-1 text-[9px] font-medium ${
                             h.contactStatus === "Connected"
                               ? "bg-emerald-50 text-emerald-700"
                               : "bg-amber-50 text-amber-700"
                           }`}>{h.contactStatus}</span>
-                        ) : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">Not Connected</span>}
+                        ) : <span className="inline-block rounded-full bg-amber-50 px-1.5 py-1 text-[9px] font-medium text-amber-700">Not Connected</span>}
                       </td>
-                      <td className="px-5 py-3.5 text-slate-500">
-                        <div className="max-w-[160px]">
+                      <td className="break-words px-1.5 py-2 text-slate-500">
+                        <div className="min-w-0">
                           {outreachComment(h)
                             ? <p className="whitespace-normal break-words" title={outreachComment(h)}>{outreachComment(h)}</p>
                             : <span className="text-slate-300">—</span>}
                         </div>
                       </td>
                       {isSuperAdmin && (
-                        <td className="whitespace-nowrap px-3 py-3.5 text-slate-500">
+                        <td className="break-all px-1.5 py-2 text-slate-500">
                           <span title={creatorLabel(h)}>{creatorLabel(h)}</span>
                         </td>
                       )}
-                      <td className="px-3 py-3.5 text-center">
+                      <td className="px-1 py-2 text-center">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="mx-auto h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1"
+                              className="mx-auto h-7 w-7 rounded-md border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1"
                               aria-label={`Actions for ${h.name}`}
                             >
-                              <MoreHorizontal className="h-5 w-5" />
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-[190px]">
@@ -675,14 +676,6 @@ export const HospitalsOperationsPage = () => {
                               <PhoneCall className="mr-2 h-4 w-4" />
                               {h.contactStatus ? "Update outreach" : "Record contact"}
                             </DropdownMenuItem>
-                            {(isSuperAdmin || isCreatedByUser(h, user)) && (
-                              <DropdownMenuItem asChild>
-                                <Link to={`/admin/hospitals/${hid}/edit`}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Edit hospital
-                                </Link>
-                              </DropdownMenuItem>
-                            )}
                             {canDeleteHospital(h) && (
                               <DropdownMenuItem
                                 className="text-red-600 focus:text-red-600"
@@ -776,16 +769,6 @@ export const HospitalsOperationsPage = () => {
                         <PhoneCall className="h-3.5 w-3.5" />
                         {hospital.contactStatus ? "Update contact" : "Record contact"}
                       </Button>
-                      {(isSuperAdmin || isCreatedByUser(hospital, user)) && (
-                        <Link
-                          to={`/admin/hospitals/${hid}/edit`}
-                          className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"
-                          title="Edit hospital"
-                          aria-label={`Edit ${hospital.name}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      )}
                       {canDeleteHospital(hospital) && (
                         <button
                           onClick={() => handleDeleteHospital(hid, hospital.name)}
@@ -873,12 +856,16 @@ export const HospitalsOperationsPage = () => {
                 id="contact-status"
                 value={contactStatus}
                 onChange={(event) => {
-                  setContactStatus(event.target.value === "Connected" ? "Connected" : "Not Connected");
+                  const status = event.target.value;
+                  setContactStatus(
+                    status === "Connected" || status === "Connected but Not Lifted" ? status : "Not Connected"
+                  );
                 }}
                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="Connected">Connected</option>
                 <option value="Not Connected">Not Connected</option>
+                <option value="Connected but Not Lifted">Connected but Not Lifted</option>
               </select>
             </div>
             {contactStatus === "Connected" && (

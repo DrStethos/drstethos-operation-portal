@@ -117,9 +117,12 @@ const HospitalProfile = () => {
 
     setIsProcessing(true);
     try {
+      if (typeof auth.authStateReady === "function") {
+        await auth.authStateReady();
+      }
       const admin = auth.currentUser;
       if (!admin) {
-        toast.error("Sign in with an authorized Firebase admin account to verify profiles.");
+        toast.error("Firebase admin session not found. Please sign out (bottom-left) and sign in again with your Firebase admin account.");
         return;
       }
 
@@ -203,9 +206,12 @@ const HospitalProfile = () => {
 
     setIsProcessing(true);
     try {
+      if (typeof auth.authStateReady === "function") {
+        await auth.authStateReady();
+      }
       const admin = auth.currentUser;
       if (!admin) {
-        toast.error("Sign in with an authorized Firebase admin account to verify profiles.");
+        toast.error("Firebase admin session not found. Please sign out (bottom-left) and sign in again with your Firebase admin account.");
         return;
       }
 
